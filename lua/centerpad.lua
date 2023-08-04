@@ -14,10 +14,10 @@ local turn_on = function(config)
   }
 
   -- Make sure that the user doesn't have more than one window/buffer open at the moment
-  if #v.nvim_tabpage_list_wins(0) > 1 then
-    print('Please only have one window and buffer open')
-    return
-  end
+  --if #v.nvim_tabpage_list_wins(0) > 1 then
+  --  print('Please only have one window and buffer open')
+  --  return
+  --end
 
   -- create scratch window to the left
   vim.o.splitright = false
