@@ -24,7 +24,7 @@ local turn_on = function(config)
   vim.cmd(string.format('%svnew', config.leftpad))
   local leftpad = v.nvim_get_current_buf()
   v.nvim_buf_set_name(leftpad, 'leftpad')
-  vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad]]
+  vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline]]
   v.nvim_set_current_win(main_win)
 
   -- create scratch window to the right
@@ -32,7 +32,7 @@ local turn_on = function(config)
   vim.cmd(string.format('%svnew', config.rightpad))
   local rightpad = v.nvim_get_current_buf()
   v.nvim_buf_set_name(rightpad, 'rightpad')
-  vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=rightpad]]
+  vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline]]
   v.nvim_set_current_win(main_win)
 
   -- keep track of the current state of the plugin
@@ -72,7 +72,7 @@ end
 -- function for user to run, toggling on/off
 center_buf.toggle = function(config)
   -- set default options
-  config = config or { leftpad = 36, rightpad = 36 }
+  config = config or { leftpad = 40, rightpad = 5 }
 
   -- if state is true, then toggle center_buf off
   if vim.g.center_buf_enabled == true then
