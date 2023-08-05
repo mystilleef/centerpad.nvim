@@ -25,6 +25,11 @@ local turn_on = function(config)
   local leftpad = v.nvim_get_current_buf()
   v.nvim_buf_set_name(leftpad, 'leftpad')
   vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly winfixwidth nomodified nomodifiable]]
+  local leftpad_group = vim.api.nvim_create_augroup("augroup_leftpad", { clear = true})
+  vim.api.nvim_create_augroup(
+    {"BufEnter"}, 
+    {buffer = leftpad, group = leftpad_group, callback = function() v.nvim_set_current_win(main_win) end}
+  )
   v.nvim_set_current_win(main_win)
 
   -- create scratch window to the right
