@@ -24,7 +24,7 @@ local turn_on = function(config)
   vim.cmd(string.format('%svnew', config.leftpad))
   local leftpad = v.nvim_get_current_buf()
   v.nvim_buf_set_name(leftpad, 'leftpad')
-  vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly]]
+  vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly winfixwidth]]
   v.nvim_set_current_win(main_win)
 
   -- create scratch window to the right
