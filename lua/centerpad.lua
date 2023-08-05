@@ -26,7 +26,7 @@ local turn_on = function(config)
   v.nvim_buf_set_name(leftpad, 'leftpad')
   vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly winfixwidth nomodified nomodifiable]]
   local leftpad_group = vim.api.nvim_create_augroup("augroup_leftpad", { clear = true})
-  vim.api.nvim_create_augroup(
+  vim.api.nvim_create_autocmd(
     {"BufEnter"}, 
     {buffer = leftpad, group = leftpad_group, callback = function() v.nvim_set_current_win(main_win) end}
   )
