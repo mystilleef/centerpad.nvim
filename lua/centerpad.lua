@@ -2,8 +2,12 @@ local v = vim.api
 
 local center_buf = {}
 
+local margin_group = vim.api.nvim_create_augroup("augroup_marginpads", { clear = true})
+
 -- function to toggle zen mode on
 local turn_on = function(config)
+  v.nvim_clear_autocmds({group = margin_group})
+
   -- Get reference to current_buffer
   local main_win = v.nvim_get_current_win()
 
@@ -25,11 +29,13 @@ local turn_on = function(config)
   local leftpad = v.nvim_get_current_buf()
   v.nvim_buf_set_name(leftpad, 'leftpad')
   vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly winfixwidth nomodified nomodifiable]]
-  local leftpad_group = vim.api.nvim_create_augroup("augroup_leftpad", { clear = true})
+  
+  -- never focus leftpad
   vim.api.nvim_create_autocmd(
     {"BufEnter"}, 
-    {buffer = leftpad, group = leftpad_group, callback = function() v.nvim_set_current_win(main_win) end}
+    {buffer = leftpad, group = margin_group, callback = function() v.nvim_set_current_win(main_win) end}
   )
+
   v.nvim_set_current_win(main_win)
 
   -- create scratch window to the right
@@ -38,6 +44,13 @@ local turn_on = function(config)
   local rightpad = v.nvim_get_current_buf()
   v.nvim_buf_set_name(rightpad, 'rightpad')
   vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly winfixwidth nomodified nomodifiable]]
+
+  -- never focus rightpad
+  vim.api.nvim_create_autocmd(
+    {"BufEnter"}, 
+    {buffer = rightpad, group = margin_group, callback = function() v.nvim_set_current_win(main_win) end}
+  )
+
   v.nvim_set_current_win(main_win)
 
   -- keep track of the current state of the plugin
