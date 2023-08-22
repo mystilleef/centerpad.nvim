@@ -38,8 +38,8 @@ local turn_on = function(config)
   local rightpad = v.nvim_get_current_buf()
   v.nvim_buf_set_name(rightpad, 'rightpad')
   vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly winfixwidth nomodified nomodifiable]]
-  vim.cmd [[hi VertSplit guibg=bg guifg=bg cterm=none]]
-  
+  vim.cmd [[hi VertSplit guibg=bg guifg=bg ctermbg=bg ctermfg=fg]]
+
   -- never focus rightpad
   vim.api.nvim_create_autocmd(
     {"BufEnter"}, 
