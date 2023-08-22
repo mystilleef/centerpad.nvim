@@ -23,7 +23,7 @@ local turn_on = function(config)
   local leftpad = v.nvim_get_current_buf()
   v.nvim_buf_set_name(leftpad, 'leftpad')
   vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly winfixwidth nomodified nomodifiable]]
-  vim.opt.fillchars:append({vert = ""})
+  vim.opt_local.fillchars:append({vert = " "})
   
   -- never focus leftpad
   vim.api.nvim_create_autocmd(
@@ -39,7 +39,7 @@ local turn_on = function(config)
   local rightpad = v.nvim_get_current_buf()
   v.nvim_buf_set_name(rightpad, 'rightpad')
   vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly winfixwidth nomodified nomodifiable]]
-  vim.opt.fillchars:append({vert = ""})
+  vim.opt_local.fillchars:append({vert = " "})
 
   -- never focus rightpad
   vim.api.nvim_create_autocmd(
