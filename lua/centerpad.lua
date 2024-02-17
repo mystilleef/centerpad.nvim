@@ -2,11 +2,39 @@ local v = vim.api
 
 local center_buf = {}
 
-local marginpads_group = vim.api.nvim_create_augroup("augroup_marginpads", { clear = true})
+local marginpads_group =
+  vim.api.nvim_create_augroup("augroup_marginpads", { clear = true })
+
+local function set_buf_options()
+  vim.cmd([[
+    setlocal hidden nobuflisted nocursorline nolist winfixwidth
+    setlocal nomodified nomodifiable
+    setlocal buftype=nofile bufhidden=hide noswapfile filetype=centerpad
+  ]])
+  vim.opt_local.fillchars:append({
+    vert = " ",
+    vertleft = " ",
+    vertright = " ",
+    verthoriz = " ",
+    horiz = " ",
+    horizup = " ",
+    horizdown = " ",
+  })
+end
+
+local function never_focus_autocmd(main_win, pad)
+  vim.api.nvim_create_autocmd({ "BufEnter" }, {
+    buffer = pad,
+    group = marginpads_group,
+    callback = function()
+      v.nvim_set_current_win(main_win)
+    end,
+  })
+end
 
 -- function to toggle zen mode on
 local turn_on = function(config)
-  v.nvim_clear_autocmds({group = marginpads_group})
+  v.nvim_clear_autocmds({ group = marginpads_group })
 
   -- Get reference to current_buffer
   local main_win = v.nvim_get_current_win()
@@ -19,32 +47,20 @@ local turn_on = function(config)
 
   -- create scratch window to the left
   vim.o.splitright = false
-  vim.cmd(string.format('%svnew', config.leftpad))
+  vim.cmd(string.format("%svnew", config.leftpad))
   local leftpad = v.nvim_get_current_buf()
-  v.nvim_buf_set_name(leftpad, 'leftpad')
-  vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly winfixwidth nomodified nomodifiable]]
-  
-  -- never focus leftpad
-  vim.api.nvim_create_autocmd(
-    {"BufEnter"}, 
-    {buffer = leftpad, group = marginpads_group, callback = function() v.nvim_set_current_win(main_win) end}
-  )
-
+  v.nvim_buf_set_name(leftpad, "leftpad")
+  set_buf_options()
+  never_focus_autocmd(main_win, leftpad)
   v.nvim_set_current_win(main_win)
 
   -- create scratch window to the right
   vim.o.splitright = true
-  vim.cmd(string.format('%svnew', config.rightpad))
+  vim.cmd(string.format("%svnew", config.rightpad))
   local rightpad = v.nvim_get_current_buf()
-  v.nvim_buf_set_name(rightpad, 'rightpad')
-  vim.cmd [[setlocal buftype=nofile bufhidden=hide noswapfile filetype=leftpad hidden nobuflisted nocursorline nolist readonly winfixwidth nomodified nomodifiable]]
-
-  -- never focus rightpad
-  vim.api.nvim_create_autocmd(
-    {"BufEnter"}, 
-    {buffer = rightpad, group = marginpads_group, callback = function() v.nvim_set_current_win(main_win) end}
-  )
-
+  v.nvim_buf_set_name(rightpad, "rightpad")
+  set_buf_options()
+  never_focus_autocmd(main_win, rightpad)
   v.nvim_set_current_win(main_win)
 
   -- keep track of the current state of the plugin
@@ -56,16 +72,18 @@ local turn_on = function(config)
 end
 
 -- function to toggle zen mode off
-local turn_off = function(config)
-  v.nvim_clear_autocmds({group = marginpads_group})
+local turn_off = function(_)
+  v.nvim_clear_autocmds({ group = marginpads_group })
 
   -- Get reference to current_buffer
   local curr_buf = v.nvim_get_current_buf()
   local curr_bufname = v.nvim_buf_get_name(curr_buf)
 
   -- Make sure the currently focused buffer is not a scratch buffer
-  if curr_bufname == 'leftpad' or curr_bufname == 'rightpad' then
-    print('If you want to toggle off zen mode, switch focus out of a scratch buffer')
+  if curr_bufname == "leftpad" or curr_bufname == "rightpad" then
+    print(
+      "If you want to toggle off zen mode, switch focus out of a scratch buffer"
+    )
     return
   end
 
@@ -74,7 +92,7 @@ local turn_off = function(config)
   for _, win in ipairs(windows) do
     local bufnr = v.nvim_win_get_buf(win)
     local cur_name = v.nvim_buf_get_name(bufnr)
-    if cur_name:match('leftpad') or cur_name:match('rightpad') then
+    if cur_name:match("leftpad") or cur_name:match("rightpad") then
       v.nvim_buf_delete(bufnr, { force = true })
     end
   end
@@ -97,11 +115,11 @@ center_buf.toggle = function(config)
 end
 
 center_buf.run_command = function(...)
-  local args = {...}
+  local args = { ... }
   if #args == 1 then
-    center_buf.toggle { leftpad = args[1], rightpad = args[1] }
+    center_buf.toggle({ leftpad = args[1], rightpad = args[1] })
   elseif #args == 2 then
-    center_buf.toggle { leftpad = args[1], rightpad = args[2] }
+    center_buf.toggle({ leftpad = args[1], rightpad = args[2] })
   else
     center_buf.toggle()
   end
