@@ -19,6 +19,11 @@ local function set_buf_options()
     horiz = " ",
     horizup = " ",
     horizdown = " ",
+    eob = " ",
+    foldopen = " ",
+    foldclose = " ",
+    fold = " ",
+    lastline = " ",
   })
 end
 
