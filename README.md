@@ -5,7 +5,7 @@
 If you have a large or widescreen monitor, this plugin
 allows you to center your `Neovim` buffer on your screen.
 
-![see in action](centerpad.mp4)
+[see in action](centerpad.mp4)
 
 ## Installing for Lazy
 
@@ -31,7 +31,7 @@ main buffer, respectively.
 ## Usage
 
 - `:Centerpad` - Toggle centering on/off
-- `:Centerpad` `20` - Set left and right padding to 20
+- `:Centerpad 20` - Set left and right padding to 20
 - `:Centerpad 10 20` - Set left padding to 10, right to 20
 
 ## Configuration
