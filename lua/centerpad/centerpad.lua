@@ -36,19 +36,15 @@ local function never_focus_autocmd(main_win, pad)
   })
 end
 
--- function to toggle zen mode on
 local turn_on = function(config)
   v.nvim_clear_autocmds({ group = marginpads_group })
-
   -- Get reference to current_buffer
   local main_win = v.nvim_get_current_win()
-
   -- get the user's current options for split directions
   local useropts = {
     splitbelow = vim.o.splitbelow,
     splitright = vim.o.splitright,
   }
-
   -- create scratch window to the left
   vim.o.splitright = false
   vim.cmd(string.format("%svnew", config.leftpad))
@@ -57,7 +53,6 @@ local turn_on = function(config)
   set_buf_options()
   never_focus_autocmd(main_win, leftpad)
   v.nvim_set_current_win(main_win)
-
   -- create scratch window to the right
   vim.o.splitright = true
   vim.cmd(string.format("%svnew", config.rightpad))
@@ -66,7 +61,6 @@ local turn_on = function(config)
   set_buf_options()
   never_focus_autocmd(main_win, rightpad)
   v.nvim_set_current_win(main_win)
-
   -- set fillchars for main window
   vim.opt.fillchars:append({
     vert = " ",
@@ -77,23 +71,18 @@ local turn_on = function(config)
     -- horizup = " ",
     -- horizdown = " ",
   })
-
   -- keep track of the current state of the plugin
   vim.g.center_buf_enabled = true
-
   -- reset the user's split opts
   vim.o.splitbelow = useropts.splitbelow
   vim.o.splitright = useropts.splitright
 end
 
--- function to toggle zen mode off
 local turn_off = function()
   v.nvim_clear_autocmds({ group = marginpads_group })
-
   -- Get reference to current_buffer
   local curr_buf = v.nvim_get_current_buf()
   local curr_bufname = v.nvim_buf_get_name(curr_buf)
-
   -- Make sure the currently focused buffer is not a scratch buffer
   if curr_bufname == "leftpad" or curr_bufname == "rightpad" then
     print(
@@ -101,7 +90,6 @@ local turn_off = function()
     )
     return
   end
-
   -- Delete the scratch buffers
   local windows = v.nvim_tabpage_list_wins(0)
   for _, win in ipairs(windows) do
@@ -111,7 +99,6 @@ local turn_off = function()
       v.nvim_buf_delete(bufnr, { force = true })
     end
   end
-
   -- keep track of the current state of the plugin
   vim.g.center_buf_enabled = false
 end
@@ -127,19 +114,16 @@ function M.disable()
   turn_off()
 end
 
--- function for user to run, toggling on/off
 M.toggle = function(config)
-  -- set default options
   config = config or { leftpad = 20, rightpad = 20 }
-  -- if state is true, then toggle center_buf off
   if vim.g.center_buf_enabled == true then
-    M.disable(config)
+    M.disable()
   else
     M.enable(config)
   end
 end
 
-M.run_command = function(config, command_opts)
+M.run = function(config, command_opts)
   local args = command_opts.fargs
   if #args == 1 then
     M.enable({ leftpad = tonumber(args[1]), rightpad = tonumber(args[1]) })

@@ -1,3 +1,5 @@
+local centerpad = require("centerpad.centerpad")
+
 local M = {
   config = {
     leftpad = 20,
@@ -11,19 +13,19 @@ local function resolve(config)
 end
 
 function M.enable()
-  require("centerpad.centerpad").enable(M.config)
+  centerpad.enable(M.config)
 end
 
 function M.disable()
-  require("centerpad.centerpad").disable()
+  centerpad.disable()
 end
 
 function M.toggle()
-  require("centerpad.centerpad").toggle(M.config)
+  centerpad.toggle(M.config)
 end
 
 function M.run(opts)
-  require("centerpad.centerpad").run_command(M.config, opts)
+  centerpad.run(M.config, opts)
 end
 
 function M.setup(config)
