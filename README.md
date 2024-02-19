@@ -1,7 +1,5 @@
 # Centerpad
 
-## Center your single lonely buffer easily
-
 If you have a large or widescreen monitor, this plugin
 allows you to center your `Neovim` buffer on your screen.
 
