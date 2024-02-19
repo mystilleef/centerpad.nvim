@@ -10,9 +10,20 @@ https://github.com/mystilleef/centerpad.nvim/assets/273399/6dd4f3fd-5053-4afa-b6
 ## Installing for Lazy
 
 ```lua
+-- lazy package manager
 {
   ...
-  -- lazy package manager
+  {
+    "mystilleef/centerpad.nvim",
+    main = "centerpad",
+    opts = { enable_by_default = false, leftpad = 20, rightpad = 20 },
+  },
+  ...
+}
+
+-- if you have lazy loading enabled then use this instead
+{
+  ...
   {
     "mystilleef/centerpad.nvim",
     main = "centerpad",
