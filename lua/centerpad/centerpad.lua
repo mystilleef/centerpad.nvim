@@ -1,7 +1,5 @@
 local v = vim.api
 
-local center_buf = {}
-
 local marginpads_group =
   vim.api.nvim_create_augroup("augroup_marginpads", { clear = true })
 
@@ -69,6 +67,17 @@ local turn_on = function(config)
   never_focus_autocmd(main_win, rightpad)
   v.nvim_set_current_win(main_win)
 
+  -- set fillchars for main window
+  vim.opt.fillchars:append({
+    vert = " ",
+    vertleft = " ",
+    vertright = " ",
+    verthoriz = " ",
+    -- horiz = " ",
+    -- horizup = " ",
+    -- horizdown = " ",
+  })
+
   -- keep track of the current state of the plugin
   vim.g.center_buf_enabled = true
 
@@ -78,7 +87,7 @@ local turn_on = function(config)
 end
 
 -- function to toggle zen mode off
-local turn_off = function(_)
+local turn_off = function()
   v.nvim_clear_autocmds({ group = marginpads_group })
 
   -- Get reference to current_buffer
@@ -107,28 +116,38 @@ local turn_off = function(_)
   vim.g.center_buf_enabled = false
 end
 
--- function for user to run, toggling on/off
-center_buf.toggle = function(config)
-  -- set default options
-  config = config or { leftpad = 36, rightpad = 36 }
+local M = {}
 
+function M.enable(config)
+  M.disable()
+  turn_on(config)
+end
+
+function M.disable()
+  turn_off()
+end
+
+-- function for user to run, toggling on/off
+M.toggle = function(config)
+  -- set default options
+  config = config or { leftpad = 20, rightpad = 20 }
   -- if state is true, then toggle center_buf off
   if vim.g.center_buf_enabled == true then
-    turn_off(config)
+    M.disable(config)
   else
-    turn_on(config)
+    M.enable(config)
   end
 end
 
-center_buf.run_command = function(...)
-  local args = { ... }
+M.run_command = function(config, command_opts)
+  local args = command_opts.fargs
   if #args == 1 then
-    center_buf.toggle({ leftpad = args[1], rightpad = args[1] })
+    M.enable({ leftpad = tonumber(args[1]), rightpad = tonumber(args[1]) })
   elseif #args == 2 then
-    center_buf.toggle({ leftpad = args[1], rightpad = args[2] })
+    M.enable({ leftpad = tonumber(args[1]), rightpad = tonumber(args[2]) })
   else
-    center_buf.toggle()
+    M.toggle(config)
   end
 end
 
-return center_buf
+return M
