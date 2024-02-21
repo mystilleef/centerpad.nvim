@@ -3,9 +3,9 @@
 If you have a large or widescreen monitor, this plugin
 allows you to center your `Neovim` buffer on your screen.
 
-### Centerpad in action
+## Centerpad in action
 
-https://github.com/mystilleef/centerpad.nvim/assets/273399/6dd4f3fd-5053-4afa-b6ba-851688398385
+[!See in action](https://github.com/mystilleef/centerpad.nvim/assets/273399/6dd4f3fd-5053-4afa-b6ba-851688398385)
 
 ## Installing for Lazy
 
