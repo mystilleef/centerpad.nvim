@@ -1,7 +1,9 @@
 # Centerpad
 
 If you have a large or widescreen monitor, this plugin
-allows you to center your `Neovim` buffer on your screen.
+allows you to center your `Neovim` main buffer by adding
+paddings to the left and right of it. The paddings are empty
+buffers that can neither be modified nor focused.
 
 ## Centerpad in action
 
@@ -16,7 +18,7 @@ allows you to center your `Neovim` buffer on your screen.
   {
     "mystilleef/centerpad.nvim",
     main = "centerpad",
-    opts = { enable_by_default = false, leftpad = 20, rightpad = 20 },
+    opts = { enable_by_default = false, leftpad = 25, rightpad = 25 },
   },
   ...
 }
@@ -27,17 +29,17 @@ allows you to center your `Neovim` buffer on your screen.
   {
     "mystilleef/centerpad.nvim",
     main = "centerpad",
-    event = "UIEnter",
-    cmd = "Centerpad",
-    opts = { enable_by_default = false, leftpad = 20, rightpad = 20 },
+    event = "UIEnter", -- lazy load on event (optional)
+    cmd = "Centerpad", -- lazy load on command (optional)
+    opts = { enable_by_default = false, leftpad = 25, rightpad = 25 },
   },
   ...
 }
 ```
 
-The `leftpad` and `rightpad` options will adjust the padding
-for the scratch buffers on the left and right side of your
-main buffer, respectively.
+The `leftpad` and `rightpad` options will adjust the
+paddings on the left and right side of the main buffer,
+respectively.
 
 ## Usage
 
@@ -48,13 +50,13 @@ main buffer, respectively.
 ## Configuration
 
 By default, `Centerpad` will set the left and right padding
-to 20 columns each. You can override these values in your
+to 25 columns each. You can override these values in your
 `Lazy` configuration as shown above.
 
 ### Setting keybinding using Lua
 
 ```lua
--- using the command
+-- use <leader>z to toggle Centerpad
 vim.api.nvim_set_keymap(
   "n",
   "<leader>z",
@@ -66,7 +68,7 @@ vim.api.nvim_set_keymap(
 ### Setting keybinding using Vimscript
 
 ```vim
-" using the command
+" use <leader>z to toggle Centerpad
 nnoremap <silent><leader>z <cmd>Centerpad<cr>
 ```
 
@@ -74,8 +76,8 @@ nnoremap <silent><leader>z <cmd>Centerpad<cr>
 
 - written completely in `Lua`
 - designed with `Lazy` compatibility in mind
-- margins can't be modified
-- margins can't be focused
+- paddings can't be modified
+- paddings can't be focused
 
 ## Credits
 
