@@ -115,7 +115,7 @@ function M.disable()
 end
 
 M.toggle = function(config)
-  config = config or { leftpad = 20, rightpad = 20 }
+  config = config or { leftpad = 25, rightpad = 25 }
   if vim.g.center_buf_enabled == true then
     M.disable()
   else

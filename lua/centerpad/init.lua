@@ -2,8 +2,8 @@ local centerpad = require("centerpad.centerpad")
 
 local M = {
   config = {
-    leftpad = 20,
-    rightpad = 20,
+    leftpad = 25,
+    rightpad = 25,
     enable_by_default = false,
   },
 }
