@@ -6,7 +6,7 @@ local marginpads_group =
 local function set_buf_options()
   vim.cmd([[
     setlocal noswapfile hidden nobuflisted nocursorline nolist winfixwidth
-    setlocal nomodified nomodifiable nonumber
+    setlocal nomodified nomodifiable nonumber winfixbuf
     setlocal buftype=nofile bufhidden=hide filetype=centerpad
     setlocal foldcolumn=0 signcolumn=no
   ]])
