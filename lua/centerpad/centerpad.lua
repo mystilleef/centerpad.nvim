@@ -36,6 +36,44 @@ local function never_focus_autocmd(main_win, pad)
   })
 end
 
+local function delete_margin_buffers()
+  local windows = v.nvim_tabpage_list_wins(0)
+  for _, win in ipairs(windows) do
+    local bufnr = v.nvim_win_get_buf(win)
+    local cur_name = v.nvim_buf_get_name(bufnr)
+    if cur_name:match("leftpad") or cur_name:match("rightpad") then
+      v.nvim_buf_delete(bufnr, { force = true })
+    end
+  end
+end
+
+local turn_off = function()
+  v.nvim_clear_autocmds({ group = marginpads_group })
+  -- Get reference to current_buffer
+  local curr_buf = v.nvim_get_current_buf()
+  local curr_bufname = v.nvim_buf_get_name(curr_buf)
+  -- Make sure the currently focused buffer is not a scratch buffer
+  if curr_bufname == "leftpad" or curr_bufname == "rightpad" then
+    print(
+      "If you want to toggle off zen mode, switch focus out of a scratch buffer"
+    )
+    return
+  end
+  delete_margin_buffers()
+  -- keep track of the current state of the plugin
+  vim.g.center_buf_enabled = false
+end
+
+local function turn_off_autocmd()
+  vim.api.nvim_create_autocmd({ "BufDelete" }, {
+    buffer = v.nvim_get_current_buf(),
+    group = marginpads_group,
+    callback = function()
+      turn_off()
+    end,
+  })
+end
+
 local turn_on = function(config)
   v.nvim_clear_autocmds({ group = marginpads_group })
   -- Get reference to current_buffer
@@ -61,6 +99,7 @@ local turn_on = function(config)
   set_buf_options()
   never_focus_autocmd(main_win, rightpad)
   v.nvim_set_current_win(main_win)
+  turn_off_autocmd()
   -- set fillchars for main window
   vim.opt.fillchars:append({
     vert = " ",
@@ -76,31 +115,6 @@ local turn_on = function(config)
   -- reset the user's split opts
   vim.o.splitbelow = useropts.splitbelow
   vim.o.splitright = useropts.splitright
-end
-
-local turn_off = function()
-  v.nvim_clear_autocmds({ group = marginpads_group })
-  -- Get reference to current_buffer
-  local curr_buf = v.nvim_get_current_buf()
-  local curr_bufname = v.nvim_buf_get_name(curr_buf)
-  -- Make sure the currently focused buffer is not a scratch buffer
-  if curr_bufname == "leftpad" or curr_bufname == "rightpad" then
-    print(
-      "If you want to toggle off zen mode, switch focus out of a scratch buffer"
-    )
-    return
-  end
-  -- Delete the scratch buffers
-  local windows = v.nvim_tabpage_list_wins(0)
-  for _, win in ipairs(windows) do
-    local bufnr = v.nvim_win_get_buf(win)
-    local cur_name = v.nvim_buf_get_name(bufnr)
-    if cur_name:match("leftpad") or cur_name:match("rightpad") then
-      v.nvim_buf_delete(bufnr, { force = true })
-    end
-  end
-  -- keep track of the current state of the plugin
-  vim.g.center_buf_enabled = false
 end
 
 local M = {}
