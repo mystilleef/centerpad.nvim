@@ -75,9 +75,7 @@ local turn_off = function()
   local curr_bufname = v.nvim_buf_get_name(curr_buf)
   -- Make sure the currently focused buffer is not a scratch buffer
   if curr_bufname == "leftpad" or curr_bufname == "rightpad" then
-    print(
-      "If you want to toggle off zen mode, switch focus out of a scratch buffer"
-    )
+    print("ERROR: margin buffers should not be in focus")
     return
   end
   delete_margin_buffers()
