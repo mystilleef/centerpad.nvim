@@ -6,7 +6,7 @@ local marginpads_group =
 local function set_buf_options()
   vim.cmd([[
     setlocal noswapfile hidden nobuflisted nocursorline nolist winfixwidth
-    setlocal nomodified nomodifiable nonumber winfixbuf
+    setlocal nomodified nomodifiable nonumber
     setlocal buftype=nofile bufhidden=hide filetype=centerpad
     setlocal foldcolumn=0 signcolumn=no
   ]])
@@ -25,6 +25,21 @@ local function set_buf_options()
     lastline = " ",
   })
 end
+
+function get_unlisted_buffers()
+  local all_buffers = vim.api.nvim_list_bufs()
+  local unlisted_buffers = {}
+  for _, bufnum in ipairs(all_buffers) do
+    if not vim.api.nvim_buf_is_loaded(bufnum) then
+      table.insert(unlisted_buffers, bufnum)
+    end
+  end
+  return unlisted_buffers
+end
+
+-- Example usage:
+-- local my_unlisted_buffers = get_unlisted_buffers()
+-- print(vim.inspect(my_unlisted_buffers))
 
 local function set_current_window(window)
   if v.nvim_win_is_valid(window) then
@@ -71,11 +86,16 @@ local turn_off = function()
 end
 
 local function turn_off_autocmd()
-  vim.api.nvim_create_autocmd({ "BufDelete" }, {
-    buffer = v.nvim_get_current_buf(),
+  vim.api.nvim_create_autocmd({ "BufLeave" }, {
     group = marginpads_group,
     callback = function()
-      turn_off()
+      local buffer = v.nvim_get_current_buf()
+      local turn_off_on_buffer_close = function()
+        if vim.tbl_contains(get_unlisted_buffers(), buffer) then
+          turn_off()
+        end
+      end
+      vim.defer_fn(turn_off_on_buffer_close, 50)
     end,
   })
 end
