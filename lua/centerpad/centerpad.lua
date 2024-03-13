@@ -26,12 +26,18 @@ local function set_buf_options()
   })
 end
 
+local function set_current_window(window)
+  if v.nvim_win_is_valid(window) then
+    v.nvim_set_current_win(window)
+  end
+end
+
 local function never_focus_autocmd(main_win, pad)
   vim.api.nvim_create_autocmd({ "BufEnter" }, {
     buffer = pad,
     group = marginpads_group,
     callback = function()
-      v.nvim_set_current_win(main_win)
+      set_current_window(main_win)
     end,
   })
 end
@@ -90,7 +96,7 @@ local turn_on = function(config)
   v.nvim_buf_set_name(leftpad, "leftpad")
   set_buf_options()
   never_focus_autocmd(main_win, leftpad)
-  v.nvim_set_current_win(main_win)
+  set_current_window(main_win)
   -- create scratch window to the right
   vim.o.splitright = true
   vim.cmd(string.format("%svnew", config.rightpad))
@@ -98,7 +104,7 @@ local turn_on = function(config)
   v.nvim_buf_set_name(rightpad, "rightpad")
   set_buf_options()
   never_focus_autocmd(main_win, rightpad)
-  v.nvim_set_current_win(main_win)
+  set_current_window(main_win)
   turn_off_autocmd()
   -- set fillchars for main window
   vim.opt.fillchars:append({
