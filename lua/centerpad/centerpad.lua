@@ -90,7 +90,7 @@ local function turn_off_autocmd()
       local buffer = v.nvim_get_current_buf()
       local turn_off_on_buffer_close = function()
         if vim.tbl_contains(get_unlisted_buffers(), buffer) then
-          turn_off()
+          vim.schedule(turn_off)
         end
       end
       vim.defer_fn(turn_off_on_buffer_close, 50)
