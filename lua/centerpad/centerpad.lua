@@ -37,10 +37,6 @@ function get_unlisted_buffers()
   return unlisted_buffers
 end
 
--- Example usage:
--- local my_unlisted_buffers = get_unlisted_buffers()
--- print(vim.inspect(my_unlisted_buffers))
-
 local function set_current_window(window)
   if v.nvim_win_is_valid(window) then
     v.nvim_set_current_win(window)
