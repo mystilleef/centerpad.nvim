@@ -50,8 +50,31 @@ local function turn_off_autocmd()
   })
 end
 
+local function never_focus_autocmd(buffer)
+  vim.api.nvim_create_autocmd("BufEnter", {
+    buffer = buffer,
+    group = marginpads_group,
+    callback = function()
+      vim.cmd("wincmd p")
+    end,
+  })
+end
+
+local function set_scratch_options(buffer)
+  vim.api.nvim_set_option_value("filetype", "centerpad", { buf = buffer })
+  vim.api.nvim_set_option_value("buftype", "nofile", { buf = buffer })
+  vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buffer })
+  vim.api.nvim_set_option_value("modifiable", false, { buf = buffer })
+  vim.api.nvim_set_option_value("readonly", true, { buf = buffer })
+  vim.api.nvim_set_option_value("buflisted", false, { buf = buffer })
+  vim.api.nvim_set_option_value("swapfile", false, { buf = buffer })
+end
+
 local function create_scratch_buffer(name, position, size)
   local buffer = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_name(buffer, name)
+  set_scratch_options(buffer)
+  never_focus_autocmd(buffer)
   local window = vim.api.nvim_open_win(buffer, false, {
     vertical = true,
     split = position,
@@ -60,17 +83,8 @@ local function create_scratch_buffer(name, position, size)
     noautocmd = true,
   })
   vim.api.nvim_win_set_width(window, size)
-  vim.api.nvim_buf_set_name(buffer, name)
   set_current_window(window)
-  vim.opt_local.fillchars:append({
-    vert = " ",
-    vertleft = " ",
-    vertright = " ",
-    verthoriz = " ",
-    horiz = " ",
-    horizup = " ",
-    horizdown = " ",
-  })
+  vim.opt_local.fillchars:append({ vert = " " })
 end
 
 local turn_on = function(config)
