@@ -1,30 +1,5 @@
-local v = vim.api
-
 local marginpads_group =
   vim.api.nvim_create_augroup("augroup_marginpads", { clear = true })
-
-local function set_buf_options()
-  vim.cmd([[
-    setlocal noswapfile hidden nobuflisted nocursorline nolist winfixwidth
-    setlocal nomodified nomodifiable nonumber
-    setlocal buftype=nofile bufhidden=hide filetype=centerpad
-    setlocal foldcolumn=0 signcolumn=no
-  ]])
-  vim.opt_local.fillchars:append({
-    vert = " ",
-    vertleft = " ",
-    vertright = " ",
-    verthoriz = " ",
-    horiz = " ",
-    horizup = " ",
-    horizdown = " ",
-    eob = " ",
-    foldopen = " ",
-    foldclose = " ",
-    fold = " ",
-    lastline = " ",
-  })
-end
 
 function get_unlisted_buffers()
   local all_buffers = vim.api.nvim_list_bufs()
@@ -38,44 +13,25 @@ function get_unlisted_buffers()
 end
 
 local function set_current_window(window)
-  if v.nvim_win_is_valid(window) then
-    v.nvim_set_current_win(window)
+  if vim.api.nvim_win_is_valid(window) then
+    vim.api.nvim_set_current_win(window)
   end
 end
 
-local function never_focus_autocmd(main_win, pad)
-  vim.api.nvim_create_autocmd({ "BufEnter" }, {
-    buffer = pad,
-    group = marginpads_group,
-    callback = function()
-      set_current_window(main_win)
-    end,
-  })
-end
-
-local function delete_margin_buffers()
-  local windows = v.nvim_tabpage_list_wins(0)
+local function delete_scratch_buffers()
+  local windows = vim.api.nvim_tabpage_list_wins(0)
   for _, win in ipairs(windows) do
-    local bufnr = v.nvim_win_get_buf(win)
-    local cur_name = v.nvim_buf_get_name(bufnr)
+    local bufnr = vim.api.nvim_win_get_buf(win)
+    local cur_name = vim.api.nvim_buf_get_name(bufnr)
     if cur_name:match("leftpad") or cur_name:match("rightpad") then
-      v.nvim_buf_delete(bufnr, { force = true })
+      vim.api.nvim_buf_delete(bufnr, { force = true })
     end
   end
 end
 
 local turn_off = function()
-  v.nvim_clear_autocmds({ group = marginpads_group })
-  -- Get reference to current_buffer
-  local curr_buf = v.nvim_get_current_buf()
-  local curr_bufname = v.nvim_buf_get_name(curr_buf)
-  -- Make sure the currently focused buffer is not a scratch buffer
-  if curr_bufname == "leftpad" or curr_bufname == "rightpad" then
-    print("ERROR: margin buffers should not be in focus")
-    return
-  end
-  delete_margin_buffers()
-  -- keep track of the current state of the plugin
+  vim.api.nvim_clear_autocmds({ group = marginpads_group })
+  delete_scratch_buffers()
   vim.g.center_buf_enabled = false
 end
 
@@ -83,58 +39,51 @@ local function turn_off_autocmd()
   vim.api.nvim_create_autocmd({ "BufLeave" }, {
     group = marginpads_group,
     callback = function()
-      local buffer = v.nvim_get_current_buf()
+      local buffer = vim.api.nvim_get_current_buf()
       local turn_off_on_buffer_close = function()
         if vim.tbl_contains(get_unlisted_buffers(), buffer) then
           vim.schedule(turn_off)
         end
       end
-      vim.defer_fn(turn_off_on_buffer_close, 50)
+      vim.schedule(turn_off_on_buffer_close)
     end,
   })
 end
 
-local turn_on = function(config)
-  v.nvim_clear_autocmds({ group = marginpads_group })
-  -- Get reference to current_buffer
-  local main_win = v.nvim_get_current_win()
-  -- get the user's current options for split directions
-  local useropts = {
-    splitbelow = vim.o.splitbelow,
-    splitright = vim.o.splitright,
-  }
-  -- create scratch window to the left
-  vim.o.splitright = false
-  vim.cmd(string.format("%svnew", config.leftpad))
-  local leftpad = v.nvim_get_current_buf()
-  v.nvim_buf_set_name(leftpad, "leftpad")
-  set_buf_options()
-  never_focus_autocmd(main_win, leftpad)
-  set_current_window(main_win)
-  -- create scratch window to the right
-  vim.o.splitright = true
-  vim.cmd(string.format("%svnew", config.rightpad))
-  local rightpad = v.nvim_get_current_buf()
-  v.nvim_buf_set_name(rightpad, "rightpad")
-  set_buf_options()
-  never_focus_autocmd(main_win, rightpad)
-  set_current_window(main_win)
-  turn_off_autocmd()
-  -- set fillchars for main window
-  vim.opt.fillchars:append({
+local function create_scratch_buffer(name, position, size)
+  local buffer = vim.api.nvim_create_buf(false, true)
+  local window = vim.api.nvim_open_win(buffer, false, {
+    vertical = true,
+    split = position,
+    focusable = false,
+    style = "minimal",
+    noautocmd = true,
+  })
+  vim.api.nvim_win_set_width(window, size)
+  vim.api.nvim_buf_set_name(buffer, name)
+  set_current_window(window)
+  vim.opt_local.fillchars:append({
     vert = " ",
     vertleft = " ",
     vertright = " ",
     verthoriz = " ",
-    -- horiz = " ",
-    -- horizup = " ",
-    -- horizdown = " ",
+    horiz = " ",
+    horizup = " ",
+    horizdown = " ",
   })
-  -- keep track of the current state of the plugin
+end
+
+local turn_on = function(config)
+  local main_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_clear_autocmds({ group = marginpads_group })
+  delete_scratch_buffers()
+  create_scratch_buffer("leftpad", "left", config.leftpad)
+  set_current_window(main_win)
+  create_scratch_buffer("rightpad", "right", config.rightpad)
+  set_current_window(main_win)
+  turn_off_autocmd()
+  vim.opt.fillchars:append({ vert = " " })
   vim.g.center_buf_enabled = true
-  -- reset the user's split opts
-  vim.o.splitbelow = useropts.splitbelow
-  vim.o.splitright = useropts.splitright
 end
 
 local M = {}
