@@ -1,4 +1,4 @@
-local scratch_buffer_fillchars = {
+local pad_buffer_fillchars = {
   horiz = " ",
   horizup = " ",
   horizdown = " ",
@@ -15,8 +15,7 @@ local scratch_buffer_fillchars = {
   lastline = " ",
 }
 
-local marginpads_group =
-  vim.api.nvim_create_augroup("augroup_marginpads", { clear = true })
+local padgroup = vim.api.nvim_create_augroup("padgroup", { clear = true })
 
 function get_unlisted_buffers()
   local all_buffers = vim.api.nvim_list_bufs()
@@ -35,7 +34,7 @@ local function set_current_window(window)
   end
 end
 
-local function delete_scratch_buffers()
+local function delete_pads()
   local windows = vim.api.nvim_tabpage_list_wins(0)
   for _, win in ipairs(windows) do
     local bufnr = vim.api.nvim_win_get_buf(win)
@@ -47,17 +46,17 @@ local function delete_scratch_buffers()
 end
 
 local turn_off = function()
-  vim.api.nvim_clear_autocmds({ group = marginpads_group })
-  delete_scratch_buffers()
+  vim.api.nvim_clear_autocmds({ group = padgroup })
+  delete_pads()
   vim.opt.fillchars:append({ vert = "│" })
   vim.g.center_buf_enabled = false
 end
 
 local function turn_off_autocmd()
   vim.api.nvim_create_autocmd({ "BufLeave" }, {
-    group = marginpads_group,
-    callback = function()
-      local buffer = vim.api.nvim_get_current_buf()
+    group = padgroup,
+    callback = function(args)
+      local buffer = args.buf
       local turn_off_on_buffer_close = function()
         if vim.tbl_contains(get_unlisted_buffers(), buffer) then
           vim.schedule(turn_off)
@@ -71,7 +70,7 @@ end
 local function prevent_focus_autocmd(buffer)
   vim.api.nvim_create_autocmd("BufEnter", {
     buffer = buffer,
-    group = marginpads_group,
+    group = padgroup,
     callback = function(args)
       local buffer_name = vim.api.nvim_buf_get_name(args.buf)
       if buffer_name:match("leftpad") then
@@ -85,8 +84,9 @@ local function prevent_focus_autocmd(buffer)
   })
 end
 
-local function set_scratch_options(window, buffer)
+local function set_pad_options(window, buffer)
   vim.api.nvim_set_option_value("winfixwidth", true, { win = window })
+  vim.api.nvim_set_option_value("winfixbuf", true, { win = window })
   vim.api.nvim_set_option_value("filetype", "centerpad", { buf = buffer })
   vim.api.nvim_set_option_value("buftype", "nofile", { buf = buffer })
   vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buffer })
@@ -96,9 +96,8 @@ local function set_scratch_options(window, buffer)
   vim.api.nvim_set_option_value("swapfile", false, { buf = buffer })
 end
 
-local function create_split_window(buffer, position)
+local function create_split_for_pad(buffer, position)
   return vim.api.nvim_open_win(buffer, false, {
-    vertical = true,
     split = position,
     focusable = false,
     style = "minimal",
@@ -106,24 +105,24 @@ local function create_split_window(buffer, position)
   })
 end
 
-local function create_scratch_buffer(name, position, size)
+local function create_pad_window(name, position, size)
   local buffer = vim.api.nvim_create_buf(false, true)
-  local window = create_split_window(buffer, position)
+  local window = create_split_for_pad(buffer, position)
   vim.api.nvim_buf_set_name(buffer, name)
-  set_scratch_options(window, buffer)
+  set_pad_options(window, buffer)
   vim.api.nvim_win_set_width(window, size)
   set_current_window(window)
-  vim.opt_local.fillchars:append(scratch_buffer_fillchars)
+  vim.opt_local.fillchars:append(pad_buffer_fillchars)
   prevent_focus_autocmd(buffer)
 end
 
-local turn_on = function(config)
+local function turn_on(config)
   local main_win = vim.api.nvim_get_current_win()
-  vim.api.nvim_clear_autocmds({ group = marginpads_group })
-  delete_scratch_buffers()
-  create_scratch_buffer("leftpad", "left", config.leftpad)
+  vim.api.nvim_clear_autocmds({ group = padgroup })
+  delete_pads()
+  create_pad_window("leftpad", "left", config.leftpad)
   set_current_window(main_win)
-  create_scratch_buffer("rightpad", "right", config.rightpad)
+  create_pad_window("rightpad", "right", config.rightpad)
   set_current_window(main_win)
   turn_off_autocmd()
   vim.opt.fillchars:append({ vert = " " })
@@ -141,16 +140,15 @@ function M.disable()
   turn_off()
 end
 
-M.toggle = function(config)
-  config = config or { leftpad = 25, rightpad = 25 }
+function M.toggle(config)
   if vim.g.center_buf_enabled == true then
     M.disable()
   else
-    M.enable(config)
+    M.enable(config or { leftpad = 25, rightpad = 25 })
   end
 end
 
-M.run = function(config, command_opts)
+function M.run(config, command_opts)
   local args = command_opts.fargs
   if #args == 1 then
     M.enable({ leftpad = tonumber(args[1]), rightpad = tonumber(args[1]) })
