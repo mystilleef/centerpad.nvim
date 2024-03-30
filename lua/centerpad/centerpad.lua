@@ -52,7 +52,9 @@ local turn_off = function()
   vim.g.center_buf_enabled = false
 end
 
-local function turn_off_autocmd()
+local function disable_autocmd()
+  -- disable centerpad when deleting buffers, using :bdelete,
+  -- to prevent weird behavior
   vim.api.nvim_create_autocmd({ "BufLeave" }, {
     group = padgroup,
     callback = function(args)
@@ -124,7 +126,7 @@ local function turn_on(config)
   set_current_window(main_win)
   create_pad_window("rightpad", "right", config.rightpad)
   set_current_window(main_win)
-  turn_off_autocmd()
+  disable_autocmd()
   vim.opt.fillchars:append({ vert = " " })
   vim.g.center_buf_enabled = true
 end
