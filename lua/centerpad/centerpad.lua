@@ -133,9 +133,16 @@ end
 
 local M = {}
 
+function M.should_enable(config)
+  local ignored = vim.tbl_contains(config.ignore_filetypes, vim.bo.filetype)
+  return config.enable_by_default and not ignored
+end
+
 function M.enable(config)
-  M.disable()
-  turn_on(config)
+  if M.should_enable(config) then
+    M.disable()
+    turn_on(config)
+  end
 end
 
 function M.disable()

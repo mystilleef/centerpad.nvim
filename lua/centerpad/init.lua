@@ -5,6 +5,7 @@ local M = {
     leftpad = 25,
     rightpad = 25,
     enable_by_default = false,
+    ignore_filetypes = { "help", "qf", "terminal" },
   },
 }
 
@@ -30,9 +31,7 @@ end
 
 function M.setup(config)
   resolve(config)
-  if M.config.enable_by_default then
-    M.enable()
-  end
+  M.enable()
 end
 
 return M
