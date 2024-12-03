@@ -31,7 +31,9 @@ end
 
 function M.setup(config)
   resolve(config)
-  M.enable()
+  if M.config.enable_by_default then
+    M.enable()
+  end
 end
 
 return M
