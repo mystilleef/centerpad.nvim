@@ -17,17 +17,6 @@ local pad_buffer_fillchars = {
 
 local padgroup = vim.api.nvim_create_augroup("padgroup", { clear = true })
 
-function get_unlisted_buffers()
-  local all_buffers = vim.api.nvim_list_bufs()
-  local unlisted_buffers = {}
-  for _, bufnum in ipairs(all_buffers) do
-    if not vim.api.nvim_buf_is_loaded(bufnum) then
-      table.insert(unlisted_buffers, bufnum)
-    end
-  end
-  return unlisted_buffers
-end
-
 local function set_current_window(window)
   if vim.api.nvim_win_is_valid(window) then
     vim.api.nvim_set_current_win(window)
@@ -45,28 +34,11 @@ local function delete_pads()
   end
 end
 
-local turn_off = function()
+local function remove_pads()
   vim.api.nvim_clear_autocmds({ group = padgroup })
   delete_pads()
   vim.opt.fillchars:append({ vert = "│" })
   vim.g.center_buf_enabled = false
-end
-
-local function disable_autocmd()
-  -- disable centerpad when deleting buffers, using :bdelete,
-  -- to prevent weird behavior
-  vim.api.nvim_create_autocmd({ "BufLeave" }, {
-    group = padgroup,
-    callback = function(args)
-      local buffer = args.buf
-      local turn_off_on_buffer_close = function()
-        if vim.tbl_contains(get_unlisted_buffers(), buffer) then
-          vim.schedule(turn_off)
-        end
-      end
-      vim.defer_fn(turn_off_on_buffer_close, 50)
-    end,
-  })
 end
 
 local function prevent_focus_autocmd(buffer)
@@ -118,7 +90,41 @@ local function create_pad_window(name, position, size)
   prevent_focus_autocmd(buffer)
 end
 
-local function turn_on(config)
+local M = {}
+
+-- restart centerpad on :bdelete
+local function restore_pads_autocmd(config)
+  vim.api.nvim_create_autocmd({ "WinClosed" }, {
+    group = padgroup,
+    callback = function(args)
+      local bufnr = args.buf
+      local buftype = vim.api.nvim_buf_get_option(bufnr, "buftype")
+      if not vim.g.center_buf_enabled then
+        return
+      end
+      if vim.tbl_contains(config.ignore_buftypes, buftype) then
+        return
+      end
+      local cur_name = vim.api.nvim_buf_get_name(bufnr)
+      if cur_name:match("leftpad") or cur_name:match("rightpad") then
+        return
+      end
+      local filetype = vim.api.nvim_buf_get_option(bufnr, "filetype")
+      if vim.tbl_contains(config.ignore_filetypes, filetype) then
+        return
+      end
+      vim.api.nvim_set_option("lazyredraw", true)
+      remove_pads()
+      vim.schedule(function()
+        M.enable(config)
+        vim.api.nvim_set_option("lazyredraw", false)
+        vim.api.nvim_command("redraw!")
+      end)
+    end,
+  })
+end
+
+local function add_pads(config)
   local main_win = vim.api.nvim_get_current_win()
   vim.api.nvim_clear_autocmds({ group = padgroup })
   delete_pads()
@@ -126,27 +132,28 @@ local function turn_on(config)
   set_current_window(main_win)
   create_pad_window("rightpad", "right", config.rightpad)
   set_current_window(main_win)
-  disable_autocmd()
+  restore_pads_autocmd(config)
   vim.opt.fillchars:append({ vert = " " })
   vim.g.center_buf_enabled = true
 end
 
-local M = {}
-
 function M.should_enable(config)
-  local ignored = vim.tbl_contains(config.ignore_filetypes, vim.bo.filetype)
-  return not ignored
+  local filetype_ignored =
+    vim.tbl_contains(config.ignore_filetypes, vim.bo.filetype)
+  local buftype_ignored =
+    vim.tbl_contains(config.ignore_buftypes, vim.bo.buftype)
+  return not filetype_ignored or not buftype_ignored
 end
 
 function M.enable(config)
   if M.should_enable(config) then
     M.disable()
-    turn_on(config)
+    add_pads(config)
   end
 end
 
 function M.disable()
-  turn_off()
+  remove_pads()
 end
 
 function M.toggle(config)
@@ -160,9 +167,13 @@ end
 function M.run(config, command_opts)
   local args = command_opts.fargs
   if #args == 1 then
-    M.enable({ leftpad = tonumber(args[1]), rightpad = tonumber(args[1]) })
+    config.leftpad = tonumber(args[1])
+    config.rightpad = tonumber(args[1])
+    M.enable(config)
   elseif #args == 2 then
-    M.enable({ leftpad = tonumber(args[1]), rightpad = tonumber(args[2]) })
+    config.leftpad = tonumber(args[1])
+    config.rightpad = tonumber(args[2])
+    M.enable(config)
   else
     M.toggle(config)
   end

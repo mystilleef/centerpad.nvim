@@ -5,7 +5,16 @@ local M = {
     leftpad = 25,
     rightpad = 25,
     enable_by_default = false,
-    ignore_filetypes = { "help", "qf", "terminal" },
+    ignore_filetypes = { "centerpad", "help", "netrw" },
+    ignore_buftypes = {
+      "acwrite",
+      "help",
+      "nofile",
+      "nowrite",
+      "prompt",
+      "quickfix",
+      "terminal",
+    },
   },
 }
 
