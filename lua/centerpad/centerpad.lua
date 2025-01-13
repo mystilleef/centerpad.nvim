@@ -98,19 +98,26 @@ local function restore_pads_autocmd(config)
     group = padgroup,
     callback = function(args)
       local bufnr = args.buf
-      local buftype = vim.api.nvim_buf_get_option(bufnr, "buftype")
       if not vim.g.center_buf_enabled then
         return
       end
+      -- It's very important to filter out as many buftypes and filetypes
+      -- as possible because this autocmd is called a lot for almost
+      -- every window closed. Buftypes are filtered out first for
+      -- performance.
+      local buftype = vim.api.nvim_buf_get_option(bufnr, "buftype")
       if vim.tbl_contains(config.ignore_buftypes, buftype) then
+        -- By default, ignore any buffer that's not a writable file.
         return
       end
       local cur_name = vim.api.nvim_buf_get_name(bufnr)
       if cur_name:match("leftpad") or cur_name:match("rightpad") then
+        -- Ignore centerpad buffers.
         return
       end
       local filetype = vim.api.nvim_buf_get_option(bufnr, "filetype")
       if vim.tbl_contains(config.ignore_filetypes, filetype) then
+        -- Ignore buffers that are not source code
         return
       end
       vim.api.nvim_set_option("lazyredraw", true)
