@@ -45,4 +45,12 @@ function M.setup(config)
   end
 end
 
+function M.set_debug(enabled)
+  centerpad.set_debug(enabled)
+end
+
+function M.get_state()
+  return centerpad.get_state()
+end
+
 return M

@@ -1,189 +1,185 @@
-local pad_buffer_fillchars = {
-  horiz = " ",
-  horizup = " ",
-  horizdown = " ",
-  vert = " ",
-  vertleft = " ",
-  vertright = " ",
-  verthoriz = " ",
-  fold = " ",
-  foldopen = " ",
-  foldclose = " ",
-  foldsep = " ",
-  diff = " ",
-  eob = " ",
-  lastline = " ",
-}
+-- Main coordinator module for centerpad
+-- Orchestrates state, window, and autocmd modules
 
-local padgroup = vim.api.nvim_create_augroup("padgroup", { clear = true })
-
-local function set_current_window(window)
-  if vim.api.nvim_win_is_valid(window) then
-    vim.api.nvim_set_current_win(window)
-  end
-end
-
-local function delete_pads()
-  local windows = vim.api.nvim_tabpage_list_wins(0)
-  for _, win in ipairs(windows) do
-    local bufnr = vim.api.nvim_win_get_buf(win)
-    local cur_name = vim.api.nvim_buf_get_name(bufnr)
-    if cur_name:match("leftpad") or cur_name:match("rightpad") then
-      vim.api.nvim_buf_delete(bufnr, { force = true })
-    end
-  end
-end
-
-local function remove_pads()
-  vim.api.nvim_clear_autocmds({ group = padgroup })
-  delete_pads()
-  vim.opt.fillchars:append({ vert = "│" })
-  vim.g.center_buf_enabled = false
-end
-
-local function prevent_focus_autocmd(buffer)
-  vim.api.nvim_create_autocmd("BufEnter", {
-    buffer = buffer,
-    group = padgroup,
-    callback = function(args)
-      local buffer_name = vim.api.nvim_buf_get_name(args.buf)
-      if buffer_name:match("leftpad") then
-        vim.cmd("wincmd l")
-      elseif buffer_name:match("rightpad") then
-        vim.cmd("wincmd h")
-      else
-        vim.cmd("wincmd p")
-      end
-    end,
-  })
-end
-
-local function set_pad_options(window, buffer)
-  vim.api.nvim_set_option_value("winfixwidth", true, { win = window })
-  vim.api.nvim_set_option_value("winfixbuf", true, { win = window })
-  vim.api.nvim_set_option_value("filetype", "centerpad", { buf = buffer })
-  vim.api.nvim_set_option_value("buftype", "nofile", { buf = buffer })
-  vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buffer })
-  vim.api.nvim_set_option_value("modifiable", false, { buf = buffer })
-  vim.api.nvim_set_option_value("readonly", true, { buf = buffer })
-  vim.api.nvim_set_option_value("buflisted", false, { buf = buffer })
-  vim.api.nvim_set_option_value("swapfile", false, { buf = buffer })
-end
-
-local function create_split_for_pad(buffer, position)
-  return vim.api.nvim_open_win(buffer, false, {
-    split = position,
-    focusable = false,
-    style = "minimal",
-    noautocmd = true,
-  })
-end
-
-local function create_pad_window(name, position, size)
-  local buffer = vim.api.nvim_create_buf(false, true)
-  local window = create_split_for_pad(buffer, position)
-  vim.api.nvim_buf_set_name(buffer, name)
-  set_pad_options(window, buffer)
-  vim.api.nvim_win_set_width(window, size)
-  set_current_window(window)
-  vim.opt_local.fillchars:append(pad_buffer_fillchars)
-  prevent_focus_autocmd(buffer)
-end
+local state = require("centerpad.state")
+local window = require("centerpad.window")
+local autocmds = require("centerpad.autocmds")
 
 local M = {}
 
--- restart centerpad on :bdelete
-local function restore_pads_autocmd(config)
-  vim.api.nvim_create_autocmd({ "WinClosed" }, {
-    group = padgroup,
-    callback = function(args)
-      local bufnr = args.buf
-      if not vim.g.center_buf_enabled then
-        return
-      end
-      -- It's very important to filter out as many buftypes and filetypes
-      -- as possible because this autocmd is called a lot for almost
-      -- every window closed. Buftypes are filtered out first for
-      -- performance.
-      local buftype = vim.api.nvim_buf_get_option(bufnr, "buftype")
-      if vim.tbl_contains(config.ignore_buftypes, buftype) then
-        -- By default, ignore any buffer that's not a writable file.
-        return
-      end
-      local cur_name = vim.api.nvim_buf_get_name(bufnr)
-      if cur_name:match("leftpad") or cur_name:match("rightpad") then
-        -- Ignore centerpad buffers.
-        return
-      end
-      local filetype = vim.api.nvim_buf_get_option(bufnr, "filetype")
-      if vim.tbl_contains(config.ignore_filetypes, filetype) then
-        -- Ignore buffers that are not source code
-        return
-      end
-      vim.api.nvim_set_option("lazyredraw", true)
-      remove_pads()
-      vim.schedule(function()
-        M.enable(config)
-        vim.api.nvim_set_option("lazyredraw", false)
-        vim.api.nvim_command("redraw!")
-      end)
-    end,
-  })
-end
-
-local function add_pads(config)
-  local main_win = vim.api.nvim_get_current_win()
-  vim.api.nvim_clear_autocmds({ group = padgroup })
-  delete_pads()
-  create_pad_window("leftpad", "left", config.leftpad)
-  set_current_window(main_win)
-  create_pad_window("rightpad", "right", config.rightpad)
-  set_current_window(main_win)
-  restore_pads_autocmd(config)
-  vim.opt.fillchars:append({ vert = " " })
-  vim.g.center_buf_enabled = true
-end
-
+-- Check if centerpad should be enabled for current buffer
 function M.should_enable(config)
   local filetype_ignored =
     vim.tbl_contains(config.ignore_filetypes, vim.bo.filetype)
   local buftype_ignored =
     vim.tbl_contains(config.ignore_buftypes, vim.bo.buftype)
-  return not filetype_ignored or not buftype_ignored
+  return not filetype_ignored and not buftype_ignored
 end
 
+-- Validate state and recover if needed
+local function validate_and_recover()
+  local valid, issues = state.validate()
+  if not valid then
+    state.log_error("validate", table.concat(issues, ", "))
+    vim.notify(
+      "Centerpad: State validation failed. Attempting recovery...",
+      vim.log.levels.WARN
+    )
+    M.disable()
+    return false
+  end
+  return true
+end
+
+-- Create and configure pad windows
+local function add_pads(config)
+  local main_win = vim.api.nvim_get_current_win()
+
+  autocmds.clear_autocmds()
+  window.delete_pads()
+
+  -- Save original settings before modifying
+  window.save_global_settings()
+
+  -- Track main window ID for navigation
+  state.pad_state.main_win = main_win
+
+  -- Create pads and track their window IDs
+  state.pad_state.left_win =
+    window.create_pad_window("leftpad", "left", config.leftpad)
+  window.set_current_window(main_win)
+  state.pad_state.right_win =
+    window.create_pad_window("rightpad", "right", config.rightpad)
+  window.set_current_window(main_win)
+
+  -- Setup autocmds for both pads
+  if state.pad_state.left_win then
+    autocmds.setup_prevent_focus_autocmd(
+      vim.api.nvim_win_get_buf(state.pad_state.left_win),
+      "left"
+    )
+  end
+
+  if state.pad_state.right_win then
+    autocmds.setup_prevent_focus_autocmd(
+      vim.api.nvim_win_get_buf(state.pad_state.right_win),
+      "right"
+    )
+  end
+
+  -- Setup restore autocmd
+  autocmds.setup_restore_pads_autocmd(config, M.enable)
+
+  -- Modify fillchars for clean appearance
+  vim.opt.fillchars:append({ vert = " " })
+
+  state.pad_state.enabled = true
+  vim.g.center_buf_enabled = true
+
+  state.log_info("add_pads", "Pads added successfully")
+
+  -- Validate state after creation
+  vim.schedule(function()
+    validate_and_recover()
+  end)
+end
+
+-- Enable centerpad
 function M.enable(config)
+  state.log_info("enable", "Attempting to enable centerpad")
+
   if M.should_enable(config) then
     M.disable()
     add_pads(config)
+  else
+    state.log_info("enable", "Skipping enable due to ignored filetype/buftype")
   end
 end
 
+-- Disable centerpad
 function M.disable()
-  remove_pads()
+  state.log_info("disable", "Disabling centerpad")
+  autocmds.cleanup()
 end
 
+-- Toggle centerpad on/off
 function M.toggle(config)
-  if vim.g.center_buf_enabled == true then
+  if state.pad_state.enabled then
+    state.log_info("toggle", "Toggling off")
     M.disable()
   else
+    state.log_info("toggle", "Toggling on")
     M.enable(config or { leftpad = 25, rightpad = 25 })
   end
 end
 
+-- Run command with optional arguments
 function M.run(config, command_opts)
   local args = command_opts.fargs
+
   if #args == 1 then
-    config.leftpad = tonumber(args[1])
-    config.rightpad = tonumber(args[1])
+    local width = tonumber(args[1])
+    if not width or width < 1 or width > 500 then
+      vim.notify(
+        "Centerpad: Invalid width '" .. args[1] .. "'. Must be between 1-500.",
+        vim.log.levels.ERROR
+      )
+      return
+    end
+    config.leftpad = width
+    config.rightpad = width
     M.enable(config)
   elseif #args == 2 then
-    config.leftpad = tonumber(args[1])
-    config.rightpad = tonumber(args[2])
+    local left_width = tonumber(args[1])
+    local right_width = tonumber(args[2])
+    if not left_width or left_width < 1 or left_width > 500 then
+      vim.notify(
+        "Centerpad: Invalid left width '"
+          .. args[1]
+          .. "'. Must be between 1-500.",
+        vim.log.levels.ERROR
+      )
+      return
+    end
+    if not right_width or right_width < 1 or right_width > 500 then
+      vim.notify(
+        "Centerpad: Invalid right width '"
+          .. args[2]
+          .. "'. Must be between 1-500.",
+        vim.log.levels.ERROR
+      )
+      return
+    end
+    config.leftpad = left_width
+    config.rightpad = right_width
     M.enable(config)
   else
     M.toggle(config)
   end
+end
+
+-- Enable debug mode
+function M.set_debug(enabled)
+  state.debug = enabled
+  if enabled then
+    vim.notify("Centerpad: Debug mode enabled", vim.log.levels.INFO)
+  end
+end
+
+-- Get current state (for debugging/health checks)
+function M.get_state()
+  return {
+    pad_state = state.pad_state,
+    saved_settings = state.saved_settings,
+    restore_timer = state.restore_timer,
+    pads_exist = state.pads_exist(),
+    validation = { state.validate() },
+  }
+end
+
+-- Validate current state
+function M.validate_state()
+  return state.validate()
 end
 
 return M
