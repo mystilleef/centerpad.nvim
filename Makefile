@@ -1,4 +1,4 @@
-.PHONY: test lint format check help
+.PHONY:  all clean ci test lint format check help
 
 help: ## Show this help message
 	@echo "Available targets:"
@@ -6,7 +6,8 @@ help: ## Show this help message
 
 test: ## Run all tests with busted
 	@echo "Running tests with busted..."
-	@nvim --headless --noplugin -u tests/minimal_init.lua -c "PlenaryBustedDirectory tests/ { minimal_init = 'tests/minimal_init.lua' }"
+	@busted
+	# @nvim --headless --noplugin -u tests/minimal_init.lua -c "PlenaryBustedDirectory tests/ { minimal_init = 'tests/minimal_init.lua' }"
 
 test-watch: ## Run tests in watch mode
 	@echo "Running tests in watch mode..."
