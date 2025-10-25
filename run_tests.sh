@@ -10,8 +10,7 @@ echo ""
 
 # Check if busted is available
 if ! command -v busted &> /dev/null; then
-    echo "Error: busted not found. Please install it:"
-    echo "  luarocks install busted"
+    echo "Error: busted not found. Please install it."
     exit 1
 fi
 
@@ -26,12 +25,7 @@ echo "Running tests..."
 echo ""
 
 # Use busted with nvim lua interpreter
-busted \
-    --helper=tests/minimal_init.lua \
-    --lua="nvim -u tests/minimal_init.lua -l" \
-    --output=gtest \
-    --pattern="_spec%.lua$" \
-    tests/centerpad/
+busted
 
 echo ""
 echo "=== Tests Complete ==="
