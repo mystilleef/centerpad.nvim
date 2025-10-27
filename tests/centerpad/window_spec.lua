@@ -60,7 +60,6 @@ describe("centerpad.window", function()
 
   describe("create_pad_window()", function()
     it("should create a valid pad window", function()
-      local initial_win = vim.api.nvim_get_current_win()
       local win = window.create_pad_window("testpad", "left", 20)
 
       assert.is_not_nil(win)
@@ -82,7 +81,8 @@ describe("centerpad.window", function()
       local win = window.create_pad_window("testpad", "right", 25)
       local buf = vim.api.nvim_win_get_buf(win)
 
-      local ok, is_centerpad = pcall(vim.api.nvim_buf_get_var, buf, "is_centerpad")
+      local ok, is_centerpad =
+        pcall(vim.api.nvim_buf_get_var, buf, "is_centerpad")
       assert.is_true(ok)
       assert.is_true(is_centerpad)
 
@@ -103,7 +103,9 @@ describe("centerpad.window", function()
         "nofile",
         vim.api.nvim_get_option_value("buftype", { buf = buf })
       )
-      assert.is_false(vim.api.nvim_get_option_value("modifiable", { buf = buf }))
+      assert.is_false(
+        vim.api.nvim_get_option_value("modifiable", { buf = buf })
+      )
       assert.is_true(vim.api.nvim_get_option_value("readonly", { buf = buf }))
       assert.is_false(vim.api.nvim_get_option_value("buflisted", { buf = buf }))
 

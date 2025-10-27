@@ -5,24 +5,6 @@ local state = require("centerpad.state")
 
 local M = {}
 
--- Fillchar configuration for pad buffers
-local pad_buffer_fillchars = {
-  horiz = " ",
-  horizup = " ",
-  horizdown = " ",
-  vert = " ",
-  vertleft = " ",
-  vertright = " ",
-  verthoriz = " ",
-  fold = " ",
-  foldopen = " ",
-  foldclose = " ",
-  foldsep = " ",
-  diff = " ",
-  eob = " ",
-  lastline = " ",
-}
-
 -- Check if a buffer is a centerpad buffer
 function M.is_pad_buffer(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then
@@ -44,8 +26,32 @@ end
 
 -- Set all required options for a pad buffer/window
 local function set_pad_options(window, buffer)
+  -- Window options
   pcall(vim.api.nvim_set_option_value, "winfixwidth", true, { win = window })
   pcall(vim.api.nvim_set_option_value, "winfixbuf", true, { win = window })
+
+  -- Disable ALL UI elements to ensure completely blank pads
+  pcall(vim.api.nvim_set_option_value, "statusline", " ", { win = window })
+  pcall(vim.api.nvim_set_option_value, "winbar", "", { win = window })
+  pcall(vim.api.nvim_set_option_value, "signcolumn", "no", { win = window })
+  pcall(vim.api.nvim_set_option_value, "number", false, { win = window })
+  pcall(
+    vim.api.nvim_set_option_value,
+    "relativenumber",
+    false,
+    { win = window }
+  )
+  pcall(vim.api.nvim_set_option_value, "foldcolumn", "0", { win = window })
+  pcall(vim.api.nvim_set_option_value, "cursorline", false, { win = window })
+  pcall(vim.api.nvim_set_option_value, "cursorcolumn", false, { win = window })
+  pcall(vim.api.nvim_set_option_value, "list", false, { win = window })
+  pcall(vim.api.nvim_set_option_value, "spell", false, { win = window })
+  pcall(vim.api.nvim_set_option_value, "colorcolumn", "", { win = window })
+  pcall(vim.api.nvim_set_option_value, "wrap", false, { win = window })
+  pcall(vim.api.nvim_set_option_value, "linebreak", false, { win = window })
+  pcall(vim.api.nvim_set_option_value, "conceallevel", 0, { win = window })
+
+  -- Buffer options
   pcall(
     vim.api.nvim_set_option_value,
     "filetype",
@@ -94,11 +100,28 @@ function M.create_pad_window(name, position, size)
 
   set_pad_options(window, buffer)
   pcall(vim.api.nvim_win_set_width, window, size)
-  M.set_current_window(window)
+
+  -- Set fillchars to make pad completely blank
+  local fillchars_str = table.concat({
+    "eob: ",
+    "fold: ",
+    "foldopen: ",
+    "foldclose: ",
+    "foldsep: ",
+    "diff: ",
+    "vert: ",
+    "horiz: ",
+    "horizup: ",
+    "horizdown: ",
+    "vertleft: ",
+    "vertright: ",
+    "verthoriz: ",
+  }, ",")
   pcall(
-    vim.opt_local.fillchars.append,
-    vim.opt_local.fillchars,
-    pad_buffer_fillchars
+    vim.api.nvim_set_option_value,
+    "fillchars",
+    fillchars_str,
+    { win = window }
   )
 
   state.log_info("create_pad_window", "Created " .. position .. " pad")
