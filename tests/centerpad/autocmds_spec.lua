@@ -43,7 +43,7 @@ describe("centerpad.autocmds", function()
 
     it("should error gracefully when given invalid buffer", function()
       -- Neovim will error on invalid buffer, but we expect it to be caught
-      local ok, err = pcall(autocmds.setup_prevent_focus_autocmd, 9999, "left")
+      local ok = pcall(autocmds.setup_prevent_focus_autocmd, 9999, "left")
       -- Either succeeds (some versions) or fails gracefully
       assert.is_not_nil(ok)
     end)

@@ -63,22 +63,25 @@ describe("centerpad.centerpad", function()
       vim.api.nvim_buf_delete(buf, { force = true })
     end)
 
-    it("should return false when both filetype and buftype are ignored", function()
-      local buf = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
-      vim.api.nvim_buf_set_option(buf, "filetype", "help")
-      vim.api.nvim_set_current_buf(buf)
+    it(
+      "should return false when both filetype and buftype are ignored",
+      function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
+        vim.api.nvim_buf_set_option(buf, "filetype", "help")
+        vim.api.nvim_set_current_buf(buf)
 
-      local config = {
-        ignore_filetypes = { "help" },
-        ignore_buftypes = { "nofile" },
-      }
+        local config = {
+          ignore_filetypes = { "help" },
+          ignore_buftypes = { "nofile" },
+        }
 
-      assert.is_false(centerpad.should_enable(config))
+        assert.is_false(centerpad.should_enable(config))
 
-      -- Cleanup
-      vim.api.nvim_buf_delete(buf, { force = true })
-    end)
+        -- Cleanup
+        vim.api.nvim_buf_delete(buf, { force = true })
+      end
+    )
   end)
 
   describe("enable()", function()
@@ -369,7 +372,8 @@ describe("centerpad.centerpad", function()
       assert.is_not_nil(current_state)
       assert.is_table(current_state)
       -- Just verify the field exists by checking it's not undefined
-      local has_field = current_state.pads_exist ~= nil or current_state.pads_exist == nil
+      local has_field = current_state.pads_exist ~= nil
+        or current_state.pads_exist == nil
       assert.is_true(has_field)
     end)
   end)

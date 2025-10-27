@@ -1,0 +1,301 @@
+---
+# Busted test framework standard library for selene
+# https://lunarmodules.github.io/busted/
+
+base: lua51
+
+globals:
+  # Test block functions
+  describe:
+    args:
+      - type: string
+      - type: function
+
+  it:
+    args:
+      - type: string
+      - type: function
+
+  context:
+    args:
+      - type: string
+      - type: function
+
+  spec:
+    args:
+      - type: string
+      - type: function
+
+  test:
+    args:
+      - type: string
+      - type: function
+
+  # Setup and teardown functions
+  setup:
+    args:
+      - type: function
+
+  teardown:
+    args:
+      - type: function
+
+  before_each:
+    args:
+      - type: function
+
+  after_each:
+    args:
+      - type: function
+
+  lazy_setup:
+    args:
+      - type: function
+
+  lazy_teardown:
+    args:
+      - type: function
+
+  strict_setup:
+    args:
+      - type: function
+
+  strict_teardown:
+    args:
+      - type: function
+
+  finally:
+    args:
+      - type: function
+
+  # Test modifiers
+  insulate:
+    args:
+      - type: string
+      - type: function
+
+  expose:
+    args:
+      - type: string
+      - type: function
+
+  pending:
+    args:
+      - type: string
+      - type: function
+        required: false
+
+  randomize:
+    args:
+      - type: bool
+        required: false
+
+  # Spy and stub functions
+  spy:
+    args:
+      - type: any
+        required: false
+
+  stub:
+    args:
+      - type: any
+        required: false
+
+  mock:
+    args:
+      - type: any
+        required: false
+
+  # Assert function (also works as a table with methods)
+  assert:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  # Assert basic methods
+  assert.True:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.False:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_true:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_false:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_truthy:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_falsy:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_nil:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_not_nil:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  # Assert comparison methods
+  assert.are.equal:
+    args:
+      - type: any
+      - type: any
+      - type: string
+        required: false
+
+  assert.are.same:
+    args:
+      - type: any
+      - type: any
+      - type: string
+        required: false
+
+  assert.are_not.equal:
+    args:
+      - type: any
+      - type: any
+      - type: string
+        required: false
+
+  assert.are_not.same:
+    args:
+      - type: any
+      - type: any
+      - type: string
+        required: false
+
+  assert.is.equal:
+    args:
+      - type: any
+      - type: any
+      - type: string
+        required: false
+
+  assert.is.same:
+    args:
+      - type: any
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_not.equal:
+    args:
+      - type: any
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_not.same:
+    args:
+      - type: any
+      - type: any
+      - type: string
+        required: false
+
+  # Assert error methods
+  assert.has_error:
+    args:
+      - type: function
+      - type: string
+        required: false
+
+  assert.has_no.errors:
+    args:
+      - type: function
+      - type: string
+        required: false
+
+  # Assert type checking
+  assert.is_table:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_function:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_string:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_number:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_boolean:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  # Negated forms
+  assert.is_not.True:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_not.False:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_not_true:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_not_false:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_not_truthy:
+    args:
+      - type: any
+      - type: string
+        required: false
+
+  assert.is_not_falsy:
+    args:
+      - type: any
+      - type: string
+        required: false

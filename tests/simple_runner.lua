@@ -1,13 +1,12 @@
+--# selene: allow(global_usage)
 -- Simple test runner that doesn't require external dependencies
 -- Just uses Neovim's built-in assert functions
 
 local tests_passed = 0
 local tests_failed = 0
-local current_suite = ""
 
 -- Simple test framework
 local function describe(name, fn)
-  current_suite = name
   print("\n" .. string.rep("=", 60))
   print("Test Suite: " .. name)
   print(string.rep("=", 60))
@@ -15,7 +14,6 @@ local function describe(name, fn)
 end
 
 local function it(description, fn)
-  local full_name = current_suite .. " > " .. description
   local status, err = pcall(fn)
 
   if status then
@@ -73,13 +71,24 @@ _G.assert = {
   are = {
     equal = function(expected, actual)
       if expected ~= actual then
-        error(string.format("Expected %s, got %s", tostring(expected), tostring(actual)))
+        error(
+          string.format(
+            "Expected %s, got %s",
+            tostring(expected),
+            tostring(actual)
+          )
+        )
       end
     end,
 
     not_equal = function(expected, actual)
       if expected == actual then
-        error(string.format("Expected values to be different, both are %s", tostring(expected)))
+        error(
+          string.format(
+            "Expected values to be different, both are %s",
+            tostring(expected)
+          )
+        )
       end
     end,
   },
