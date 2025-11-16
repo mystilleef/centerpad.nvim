@@ -159,7 +159,8 @@ describe("centerpad.state", function()
 
       local valid, issues = state.validate()
       assert.is_false(valid)
-      assert.is_true(vim.tbl_contains(issues, "Right pad missing"))
+      assert.are.equal(1, #issues)
+      assert.are.equal("Right pad missing", issues[1])
 
       -- Cleanup
       vim.api.nvim_win_close(win, true)
@@ -179,7 +180,8 @@ describe("centerpad.state", function()
 
       local valid, issues = state.validate()
       assert.is_false(valid)
-      assert.is_true(vim.tbl_contains(issues, "Left pad missing"))
+      assert.are.equal(1, #issues)
+      assert.are.equal("Left pad missing", issues[1])
 
       -- Cleanup
       vim.api.nvim_win_close(win, true)
@@ -190,7 +192,8 @@ describe("centerpad.state", function()
 
       local valid, issues = state.validate()
       assert.is_false(valid)
-      assert.is_true(vim.tbl_contains(issues, "Main window invalid"))
+      assert.are.equal(1, #issues)
+      assert.are.equal("Main window invalid", issues[1])
     end)
 
     it("should detect enabled flag mismatch - enabled but no pads", function()
@@ -200,9 +203,97 @@ describe("centerpad.state", function()
 
       local valid, issues = state.validate()
       assert.is_false(valid)
-      assert.is_true(
-        vim.tbl_contains(issues, "Enabled flag set but pads don't exist")
-      )
+      assert.are.equal(1, #issues)
+      assert.are.equal("Enabled flag set but pads don't exist", issues[1])
+    end)
+
+    it("should detect enabled flag mismatch - pads exist but not enabled", function()
+      local buf1 = vim.api.nvim_create_buf(false, true)
+      local win1 = vim.api.nvim_open_win(buf1, false, {
+        relative = "editor",
+        width = 10,
+        height = 10,
+        row = 0,
+        col = 0,
+      })
+
+      local buf2 = vim.api.nvim_create_buf(false, true)
+      local win2 = vim.api.nvim_open_win(buf2, false, {
+        relative = "editor",
+        width = 10,
+        height = 10,
+        row = 0,
+        col = 20,
+      })
+
+      state.pad_state.left_win = win1
+      state.pad_state.right_win = win2
+      state.pad_state.enabled = false
+
+      local valid, issues = state.validate()
+      assert.is_false(valid)
+      assert.are.equal(1, #issues)
+      assert.are.equal("Pads exist but enabled flag not set", issues[1])
+
+      -- Cleanup
+      vim.api.nvim_win_close(win1, true)
+      vim.api.nvim_win_close(win2, true)
+    end)
+
+    it("should detect multiple issues at once", function()
+      local buf = vim.api.nvim_create_buf(false, true)
+      local win = vim.api.nvim_open_win(buf, false, {
+        relative = "editor",
+        width = 10,
+        height = 10,
+        row = 0,
+        col = 0,
+      })
+
+      state.pad_state.left_win = win
+      state.pad_state.right_win = nil
+      state.pad_state.main_win = 9999
+
+      local valid, issues = state.validate()
+      assert.is_false(valid)
+      assert.are.equal(2, #issues)
+      assert.is_true(vim.tbl_contains(issues, "Right pad missing"))
+      assert.is_true(vim.tbl_contains(issues, "Main window invalid"))
+
+      -- Cleanup
+      vim.api.nvim_win_close(win, true)
+    end)
+
+    it("should return valid when both pads exist and enabled is true", function()
+      local buf1 = vim.api.nvim_create_buf(false, true)
+      local win1 = vim.api.nvim_open_win(buf1, false, {
+        relative = "editor",
+        width = 10,
+        height = 10,
+        row = 0,
+        col = 0,
+      })
+
+      local buf2 = vim.api.nvim_create_buf(false, true)
+      local win2 = vim.api.nvim_open_win(buf2, false, {
+        relative = "editor",
+        width = 10,
+        height = 10,
+        row = 0,
+        col = 20,
+      })
+
+      state.pad_state.left_win = win1
+      state.pad_state.right_win = win2
+      state.pad_state.enabled = true
+
+      local valid, issues = state.validate()
+      assert.is_true(valid)
+      assert.are.equal(0, #issues)
+
+      -- Cleanup
+      vim.api.nvim_win_close(win1, true)
+      vim.api.nvim_win_close(win2, true)
     end)
   end)
 
@@ -212,14 +303,51 @@ describe("centerpad.state", function()
       -- These should not error but also not produce output
       state.log_error("test", "error message")
       state.log_info("test", "info message")
+      -- Should not call vim.notify (no assertion, just verify no error)
     end)
 
-    it("should log when debug is enabled", function()
+    it("should log error when debug is enabled", function()
       state.debug = true
-      -- These should produce notifications (we can't easily test the output)
-      -- Just verify they don't error
+      -- Should call vim.notify with WARN level
       state.log_error("test", "error message")
+      -- No error means it executed successfully
+    end)
+
+    it("should log info when debug is enabled", function()
+      state.debug = true
+      -- Should call vim.notify with INFO level
       state.log_info("test", "info message")
+      -- No error means it executed successfully
+    end)
+
+    it("should format error message correctly", function()
+      state.debug = true
+      -- Test with different error types
+      state.log_error("context1", "simple error")
+      state.log_error("context2", 42)
+      state.log_error("context3", { key = "value" })
+    end)
+
+    it("should format info message correctly", function()
+      state.debug = true
+      -- Test with different message types
+      state.log_info("context1", "simple message")
+      state.log_info("context2", 123)
+      state.log_info("context3", true)
+    end)
+
+    it("should handle debug mode toggle", function()
+      -- Start disabled
+      state.debug = false
+      state.log_error("test1", "should not log")
+
+      -- Enable
+      state.debug = true
+      state.log_error("test2", "should log")
+
+      -- Disable again
+      state.debug = false
+      state.log_info("test3", "should not log")
     end)
   end)
 end)
