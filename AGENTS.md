@@ -2,6 +2,8 @@
 
 ## Rules
 
+- Study `ORIENT.md` for quick overview of the project, and before making
+  code edits.
 - After edits: run `make check`.
 - After task completion: run `make test`.
 - Address all issues from lints and tests.
