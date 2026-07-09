@@ -1,9 +1,9 @@
 # Centerpad
 
-If you have a large or widescreen monitor, this plugin
-allows you to center your `Neovim` main buffer by adding
-paddings to the left and right of it. The paddings are empty
-buffers that can neither be modified nor focused.
+If you have a large or widescreen monitor, this plugin allows you to
+center your `Neovim` main buffer by adding paddings to the left and
+right of it. The paddings are empty buffers that can neither be modified
+nor focused.
 
 ## Centerpad in action
 
@@ -37,9 +37,8 @@ buffers that can neither be modified nor focused.
 }
 ```
 
-The `leftpad` and `rightpad` options will adjust the
-paddings on the left and right side of the main buffer,
-respectively.
+The `leftpad` and `rightpad` options will adjust the paddings on the
+left and right side of the main buffer, respectively.
 
 ## Usage
 
@@ -49,9 +48,9 @@ respectively.
 
 ## Configuration
 
-By default, `Centerpad` will set the left and right padding
-to 25 columns each. You can override these values in your
-`Lazy` configuration as shown above.
+By default, `Centerpad` will set the left and right padding to 25
+columns each. You can override these values in your `Lazy` configuration
+as shown above.
 
 ### Setting keybinding using Lua
 
@@ -78,6 +77,28 @@ nnoremap <silent><leader>z <cmd>Centerpad<cr>
 - designed with `Lazy` compatibility in mind
 - paddings can't be modified
 - paddings can't be focused
+
+## State globals
+
+- `vim.g.centerpad_enabled` serves as the primary enabled-state flag.
+- `vim.g.center_buf_enabled` remains mirrored for one release as a
+  deprecated bridge.
+
+### Migration
+
+Replace `vim.g.center_buf_enabled` with `vim.g.centerpad_enabled`. The
+legacy global still syncs for this release, then support drops.
+
+## Scope
+
+- Blank side padding around the current editing window.
+- Focus prevention on pads, with focus redirected to the main window.
+- State validation and automatic recovery.
+
+### Non-goals
+
+- Zen-mode or distraction-free layout management.
+- Feature parity with other centering or zen plugins.
 
 ## Credits
 

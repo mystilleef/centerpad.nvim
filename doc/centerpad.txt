@@ -3,59 +3,85 @@ Author:   Ben Smith <https://ben-smith.dev>
 Repo:     https://github.com/smithbm2316/centerpad.nvim
 License:  MIT
 
-This is a simple plugin that at the moment takes your current buffer and plops
-it into the middle of your screen, with two scratch buffers on either side.
-Nothing more than that! Of course, the width of how big the padding on each side
-of your screen is easily configurable as well! This plugin is simple by nature,
-as it is my first attempt at a Lua plugin, and really was just a utility module
-that I wrote for my own neovim dotfiles, that I figured I could pretty easily
-turn into a small plugin that a few others might get some use out of.
+Centerpad centers the current editing window by placing blank, unfocusable
+padding buffers on the left and right.
 
 USAGE                                                               *centerpad*
 
-All you will have to do is run the command `:Centerpad` or `:lua
-require'centerpad'.toggle()` to toggle centering of your current buffer on/off.
-The `:Centerpad` command accepts 1-2 arguments, you can pass it one number to
-use for both sides of the centered buffer (i.e. `:Centerpad 20`), or two numbers
-if you want the left and right scratch buffers to use different sizing (i.e.
-  `:Centerpad 10 20`).
+Run `:Centerpad` or `:lua require("centerpad").toggle()` to toggle centering.
+`:Centerpad` accepts one or two numbers:
+
+- `:Centerpad 20`       sets both pads to 20 columns
+- `:Centerpad 10 20`    sets left pad to 10 and right pad to 20
+
+EDGE CASES                                                   *centerpad-edge*
+
+- Ignored buffers (`terminal`, `quickfix`, `help`, `nofile`, `centerpad`) skip
+  enablement.
+- Floating windows never become the centered main window.
+- Invalid widths below `1`, above `500`, empty, or non-numeric notify an error
+  and leave existing pads, config, and state unchanged.
 
 CONFIGURATION
 
-By default, centerpad.nvim will set the left and right padding to 36 columns
-each. If you want to override this, I'd recommend setting up a keybinding in
-your vim config similar to what I have in my own config:
+Default padding: 25 columns on each side. Override via `setup`:
 
-IN YOUR INIT.LUA
+```lua
+require("centerpad").setup({
+  leftpad = 25,
+  rightpad = 25,
+  enable_by_default = false,
+})
+```
+
+Example keybindings in Lua:
+
 ```lua
 -- using the command
 vim.api.nvim_set_keymap(
-  'n',
-  '<leader>z',
-  '<cmd>Centerpad<cr>',
+  "n",
+  "<leader>z",
+  "<cmd>Centerpad<cr>",
   { silent = true, noremap = true }
 )
 
--- or using the lua function
+-- using the lua function
 vim.api.nvim_set_keymap(
-  'n',
-  '<leader>z',
-  "<cmd>lua require'centerpad'.toggle{ leftpad = 20, rightpad = 20 }<cr>",
+  "n",
+  "<leader>z",
+  "<cmd>lua require('centerpad').toggle()<cr>",
   { silent = true, noremap = true }
 )
 ```
 
-IN YOUR INIT.VIM
+Example keybindings in Vimscript:
+
 ```vim
 " using the command
 nnoremap <silent><leader>z <cmd>Centerpad<cr>
 
-" or using the lua function
-nnoremap <silent><leader>z <cmd>lua require'centerpad'.toggle {
-  leftpad = 36,
-  rightpad = 36
-}<cr>
+" using the lua function
+nnoremap <silent><leader>z <cmd>lua require('centerpad').toggle()<cr>
 ```
 
-The `leftpad` and `rightpad` options will adjust the padding for the scratch
-buffers on the left and right side of your main buffer, respectively.
+STATE GLOBALS
+
+- `vim.g.centerpad_enabled` serves as the primary enabled-state flag.
+- `vim.g.center_buf_enabled` remains mirrored for one release as a
+  deprecated bridge.
+
+MIGRATION
+
+Replace `vim.g.center_buf_enabled` with `vim.g.centerpad_enabled`. The legacy
+global still syncs for this release, then support drops.
+
+SCOPE
+
+- Blank side padding around the current editing window.
+- Focus prevention on pads, with focus redirected to the main window.
+- State validation and automatic recovery.
+
+NON-GOALS
+
+- Zen-mode or distraction-free layout management.
+- Feature parity with other centering or zen plugins.
