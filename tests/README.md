@@ -1,6 +1,7 @@
 # Centerpad Tests
 
-This directory contains the test suite for centerpad.nvim using the busted testing framework.
+This directory contains the test suite for centerpad.nvim using the
+busted testing framework.
 
 ## Test Structure
 
@@ -55,6 +56,7 @@ You can also source test files directly in Neovim:
 ## Test Coverage
 
 ### state_spec.lua (State Management)
+
 - ✓ Initial state verification
 - ✓ State reset functionality
 - ✓ `pads_exist()` logic with various scenarios
@@ -62,6 +64,7 @@ You can also source test files directly in Neovim:
 - ✓ Debug logging functionality
 
 ### window_spec.lua (Window Manipulation)
+
 - ✓ Buffer identification (`is_pad_buffer()`)
 - ✓ Window focus management
 - ✓ Pad window creation with correct properties
@@ -70,6 +73,7 @@ You can also source test files directly in Neovim:
 - ✓ Global settings save/restore
 
 ### autocmds_spec.lua (Autocmd Management)
+
 - ✓ Autocmd group existence
 - ✓ Focus prevention autocmd setup
 - ✓ Restore autocmd with debouncing
@@ -77,6 +81,7 @@ You can also source test files directly in Neovim:
 - ✓ Full cleanup (autocmds + pads + settings)
 
 ### centerpad_spec.lua (Main Coordinator)
+
 - ✓ `should_enable()` with various buffer types
 - ✓ Enable/disable functionality
 - ✓ Toggle behavior
@@ -120,13 +125,19 @@ make ci  # Runs lint, format check, and tests
 ## Troubleshooting
 
 ### "nlua not found"
+
 Install nlua: `luarocks install nlua`
 
 ### "busted not found"
+
 Install busted: `luarocks install busted`
 
 ### Tests fail due to window/buffer issues
-Make sure you're running in a headless Neovim instance with proper initialization.
+
+Make sure you're running in a headless Neovim instance with proper
+initialization.
 
 ### Module not found errors
-Ensure the plugin directory is in the runtimepath. The `minimal_init.lua` should handle this automatically.
+
+Ensure the plugin directory is in the runtimepath. The
+`minimal_init.lua` should handle this automatically.
