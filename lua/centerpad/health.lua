@@ -39,6 +39,7 @@ function M.check()
   -- Get centerpad state
   local centerpad = require("centerpad.centerpad")
   local state = require("centerpad.state")
+  local enabled = require("centerpad.enabled")
 
   -- Check if centerpad is enabled
   if state.pad_state.enabled then
@@ -76,16 +77,9 @@ function M.check()
     end
 
     -- Check saved settings
-    if state.saved_settings.fillchars then
+    if state.saved_settings.fillchars ~= nil then
       vim.health.info(
         "Original fillchars saved: " .. state.saved_settings.fillchars
-      )
-    end
-
-    if state.saved_settings.lazyredraw ~= nil then
-      vim.health.info(
-        "Original lazyredraw saved: "
-          .. tostring(state.saved_settings.lazyredraw)
       )
     end
 
@@ -105,16 +99,38 @@ function M.check()
     end
   end
 
-  -- Check global flag consistency
-  if vim.g.center_buf_enabled == state.pad_state.enabled then
-    vim.health.ok("Global flag is consistent with state")
+  -- Read globals (warns once on legacy-only usage) and report consistency
+  local new_global, legacy_global = enabled.read_globals()
+
+  if new_global == state.pad_state.enabled then
+    vim.health.ok("Global flag 'centerpad_enabled' is consistent with state")
   else
     vim.health.warn(
-      "Global flag mismatch: vim.g.center_buf_enabled="
-        .. tostring(vim.g.center_buf_enabled)
+      "Global flag mismatch: vim.g.centerpad_enabled="
+        .. tostring(new_global)
         .. " but state.enabled="
-        .. tostring(state.pad_state.enabled)
+        .. tostring(state.pad_state.enabled),
+      { "Run :Centerpad to resynchronize state" }
     )
+  end
+
+  -- Legacy bridge status
+  if legacy_global ~= nil then
+    if legacy_global == state.pad_state.enabled then
+      vim.health.info(
+        "Legacy global 'center_buf_enabled' matches state (deprecated)"
+      )
+    else
+      vim.health.warn(
+        "Legacy global mismatch: vim.g.center_buf_enabled="
+          .. tostring(legacy_global)
+          .. " but state.enabled="
+          .. tostring(state.pad_state.enabled),
+        {
+          "Use vim.g.centerpad_enabled instead; center_buf_enabled will be removed",
+        }
+      )
+    end
   end
 
   -- Debug mode status
