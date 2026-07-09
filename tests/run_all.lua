@@ -1,17 +1,5 @@
--- Simple test runner that uses Neovim's built-in busted
+-- Test runner that runs all specs via the built-in simple runner.
 -- Run with: nvim --headless -u tests/minimal_init.lua -l tests/run_all.lua
 
--- Load modules
-dofile("tests/centerpad/state_spec.lua")
-dofile("tests/centerpad/window_spec.lua")
-dofile("tests/centerpad/autocmds_spec.lua")
-dofile("tests/centerpad/centerpad_spec.lua")
-
-print("✓ All test files loaded successfully")
-print("\nTo run tests, use:")
-print("  busted tests/")
-print("\nOr if nlua/busted aren't configured, test manually by:")
-print("  :source tests/centerpad/state_spec.lua")
-print("  etc.")
-
-os.exit(0)
+-- The simple runner provides describe/it/assert and executes each spec file.
+dofile("tests/simple_runner.lua")

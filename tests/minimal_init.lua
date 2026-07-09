@@ -10,6 +10,10 @@ vim.opt.backup = false
 vim.opt.writebackup = false
 vim.opt.undofile = false
 
+-- Skip filetype plugins and indent scripts to avoid treesitter/highlighter
+-- issues in headless tests.
+vim.cmd("filetype plugin indent off")
+
 -- Create a reasonable window for tests
 vim.o.lines = 50
 vim.o.columns = 120
