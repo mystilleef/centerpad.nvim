@@ -14,7 +14,6 @@ M.pad_state = {
 -- Store original global settings to restore later
 M.saved_settings = {
   fillchars = nil,
-  lazyredraw = nil,
 }
 
 -- Debounce timer for WinClosed autocmd
@@ -33,7 +32,6 @@ function M.reset()
   }
   M.saved_settings = {
     fillchars = nil,
-    lazyredraw = nil,
   }
   M.restore_timer = nil
 end

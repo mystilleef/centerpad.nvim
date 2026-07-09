@@ -21,7 +21,6 @@ describe("centerpad.state", function()
 
     it("should have nil saved settings", function()
       assert.is_nil(state.saved_settings.fillchars)
-      assert.is_nil(state.saved_settings.lazyredraw)
     end)
 
     it("should have nil restore timer", function()
@@ -41,7 +40,6 @@ describe("centerpad.state", function()
       state.pad_state.right_win = 3
       state.pad_state.enabled = true
       state.saved_settings.fillchars = "test"
-      state.saved_settings.lazyredraw = true
       state.restore_timer = 123
 
       -- Reset
@@ -53,7 +51,6 @@ describe("centerpad.state", function()
       assert.is_nil(state.pad_state.right_win)
       assert.is_false(state.pad_state.enabled)
       assert.is_nil(state.saved_settings.fillchars)
-      assert.is_nil(state.saved_settings.lazyredraw)
       assert.is_nil(state.restore_timer)
     end)
   end)
@@ -207,38 +204,41 @@ describe("centerpad.state", function()
       assert.are.equal("Enabled flag set but pads don't exist", issues[1])
     end)
 
-    it("should detect enabled flag mismatch - pads exist but not enabled", function()
-      local buf1 = vim.api.nvim_create_buf(false, true)
-      local win1 = vim.api.nvim_open_win(buf1, false, {
-        relative = "editor",
-        width = 10,
-        height = 10,
-        row = 0,
-        col = 0,
-      })
+    it(
+      "should detect enabled flag mismatch - pads exist but not enabled",
+      function()
+        local buf1 = vim.api.nvim_create_buf(false, true)
+        local win1 = vim.api.nvim_open_win(buf1, false, {
+          relative = "editor",
+          width = 10,
+          height = 10,
+          row = 0,
+          col = 0,
+        })
 
-      local buf2 = vim.api.nvim_create_buf(false, true)
-      local win2 = vim.api.nvim_open_win(buf2, false, {
-        relative = "editor",
-        width = 10,
-        height = 10,
-        row = 0,
-        col = 20,
-      })
+        local buf2 = vim.api.nvim_create_buf(false, true)
+        local win2 = vim.api.nvim_open_win(buf2, false, {
+          relative = "editor",
+          width = 10,
+          height = 10,
+          row = 0,
+          col = 20,
+        })
 
-      state.pad_state.left_win = win1
-      state.pad_state.right_win = win2
-      state.pad_state.enabled = false
+        state.pad_state.left_win = win1
+        state.pad_state.right_win = win2
+        state.pad_state.enabled = false
 
-      local valid, issues = state.validate()
-      assert.is_false(valid)
-      assert.are.equal(1, #issues)
-      assert.are.equal("Pads exist but enabled flag not set", issues[1])
+        local valid, issues = state.validate()
+        assert.is_false(valid)
+        assert.are.equal(1, #issues)
+        assert.are.equal("Pads exist but enabled flag not set", issues[1])
 
-      -- Cleanup
-      vim.api.nvim_win_close(win1, true)
-      vim.api.nvim_win_close(win2, true)
-    end)
+        -- Cleanup
+        vim.api.nvim_win_close(win1, true)
+        vim.api.nvim_win_close(win2, true)
+      end
+    )
 
     it("should detect multiple issues at once", function()
       local buf = vim.api.nvim_create_buf(false, true)
@@ -264,37 +264,40 @@ describe("centerpad.state", function()
       vim.api.nvim_win_close(win, true)
     end)
 
-    it("should return valid when both pads exist and enabled is true", function()
-      local buf1 = vim.api.nvim_create_buf(false, true)
-      local win1 = vim.api.nvim_open_win(buf1, false, {
-        relative = "editor",
-        width = 10,
-        height = 10,
-        row = 0,
-        col = 0,
-      })
+    it(
+      "should return valid when both pads exist and enabled is true",
+      function()
+        local buf1 = vim.api.nvim_create_buf(false, true)
+        local win1 = vim.api.nvim_open_win(buf1, false, {
+          relative = "editor",
+          width = 10,
+          height = 10,
+          row = 0,
+          col = 0,
+        })
 
-      local buf2 = vim.api.nvim_create_buf(false, true)
-      local win2 = vim.api.nvim_open_win(buf2, false, {
-        relative = "editor",
-        width = 10,
-        height = 10,
-        row = 0,
-        col = 20,
-      })
+        local buf2 = vim.api.nvim_create_buf(false, true)
+        local win2 = vim.api.nvim_open_win(buf2, false, {
+          relative = "editor",
+          width = 10,
+          height = 10,
+          row = 0,
+          col = 20,
+        })
 
-      state.pad_state.left_win = win1
-      state.pad_state.right_win = win2
-      state.pad_state.enabled = true
+        state.pad_state.left_win = win1
+        state.pad_state.right_win = win2
+        state.pad_state.enabled = true
 
-      local valid, issues = state.validate()
-      assert.is_true(valid)
-      assert.are.equal(0, #issues)
+        local valid, issues = state.validate()
+        assert.is_true(valid)
+        assert.are.equal(0, #issues)
 
-      -- Cleanup
-      vim.api.nvim_win_close(win1, true)
-      vim.api.nvim_win_close(win2, true)
-    end)
+        -- Cleanup
+        vim.api.nvim_win_close(win1, true)
+        vim.api.nvim_win_close(win2, true)
+      end
+    )
   end)
 
   describe("logging", function()
