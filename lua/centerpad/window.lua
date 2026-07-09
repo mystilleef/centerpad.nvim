@@ -66,6 +66,44 @@ local function set_pad_options(window, buffer)
   pcall(vim.api.nvim_set_option_value, "swapfile", false, { buf = buffer })
 end
 
+-- Pad-local fillchars value
+local function pad_fillchars()
+  return table.concat({
+    "eob: ",
+    "fold: ",
+    "foldopen: ",
+    "foldclose: ",
+    "foldsep: ",
+    "diff: ",
+    "vert: ",
+    "horiz: ",
+    "horizup: ",
+    "horizdown: ",
+    "vertleft: ",
+    "vertright: ",
+    "verthoriz: ",
+  }, ",")
+end
+
+-- Apply all pad window/buffer configuration except split creation
+local function configure_pad(window, buffer, size)
+  set_pad_options(window, buffer)
+
+  local width_ok = pcall(vim.api.nvim_win_set_width, window, size)
+  if not width_ok then
+    return false
+  end
+
+  pcall(
+    vim.api.nvim_set_option_value,
+    "fillchars",
+    pad_fillchars(),
+    { win = window }
+  )
+
+  return true
+end
+
 -- Create a split window for a pad
 local function create_split_for_pad(buffer, position)
   return vim.api.nvim_open_win(buffer, false, {
@@ -98,34 +136,72 @@ function M.create_pad_window(name, position, size)
   pcall(vim.api.nvim_buf_set_var, buffer, "is_centerpad", true)
   pcall(vim.api.nvim_buf_set_var, buffer, "pad_side", position)
 
-  set_pad_options(window, buffer)
-  pcall(vim.api.nvim_win_set_width, window, size)
-
-  -- Set fillchars to make pad completely blank
-  local fillchars_str = table.concat({
-    "eob: ",
-    "fold: ",
-    "foldopen: ",
-    "foldclose: ",
-    "foldsep: ",
-    "diff: ",
-    "vert: ",
-    "horiz: ",
-    "horizup: ",
-    "horizdown: ",
-    "vertleft: ",
-    "vertright: ",
-    "verthoriz: ",
-  }, ",")
-  pcall(
-    vim.api.nvim_set_option_value,
-    "fillchars",
-    fillchars_str,
-    { win = window }
-  )
+  if not configure_pad(window, buffer, size) then
+    state.log_error("create_pad_window", "Failed to configure pad window")
+    pcall(vim.api.nvim_win_close, window, true)
+    pcall(vim.api.nvim_buf_delete, buffer, { force = true })
+    return nil
+  end
 
   state.log_info("create_pad_window", "Created " .. position .. " pad")
   return window
+end
+
+-- Check if both tracked pads are valid centerpad windows
+function M.are_pads_valid()
+  local left_win = state.pad_state.left_win
+  local right_win = state.pad_state.right_win
+
+  if not left_win or not right_win then
+    return false
+  end
+  if
+    not vim.api.nvim_win_is_valid(left_win)
+    or not vim.api.nvim_win_is_valid(right_win)
+  then
+    return false
+  end
+
+  local ok_l, left_buf = pcall(vim.api.nvim_win_get_buf, left_win)
+  local ok_r, right_buf = pcall(vim.api.nvim_win_get_buf, right_win)
+  if not ok_l or not ok_r then
+    return false
+  end
+
+  return M.is_pad_buffer(left_buf) and M.is_pad_buffer(right_buf)
+end
+
+-- Resize an existing pad window in place
+function M.resize_pad(window, size)
+  if not vim.api.nvim_win_is_valid(window) then
+    return false
+  end
+
+  local ok, buf = pcall(vim.api.nvim_win_get_buf, window)
+  if not ok or not M.is_pad_buffer(buf) then
+    return false
+  end
+
+  return configure_pad(window, buf, size)
+end
+
+-- Return the width of a valid pad window, or nil otherwise
+function M.get_pad_width(window)
+  if not window or not vim.api.nvim_win_is_valid(window) then
+    return nil
+  end
+
+  local ok, buf = pcall(vim.api.nvim_win_get_buf, window)
+  if not ok or not M.is_pad_buffer(buf) then
+    return nil
+  end
+
+  local width_ok, width = pcall(vim.api.nvim_win_get_width, window)
+  if not width_ok then
+    return nil
+  end
+
+  return width
 end
 
 -- Delete pads using tracked window IDs (efficient)
@@ -178,24 +254,12 @@ end
 -- Restore global settings
 function M.restore_global_settings()
   -- Restore fillchars
-  if state.saved_settings.fillchars then
+  if state.saved_settings.fillchars ~= nil then
     pcall(function()
       vim.o.fillchars = state.saved_settings.fillchars
     end)
     state.saved_settings.fillchars = nil
     state.log_info("restore_settings", "Restored fillchars")
-  end
-
-  -- Restore lazyredraw
-  if state.saved_settings.lazyredraw ~= nil then
-    pcall(
-      vim.api.nvim_set_option_value,
-      "lazyredraw",
-      state.saved_settings.lazyredraw,
-      {}
-    )
-    state.saved_settings.lazyredraw = nil
-    state.log_info("restore_settings", "Restored lazyredraw")
   end
 end
 

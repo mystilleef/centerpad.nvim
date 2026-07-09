@@ -119,6 +119,15 @@ describe("centerpad.window", function()
       )
       assert.is_true(vim.api.nvim_get_option_value("readonly", { buf = buf }))
       assert.is_false(vim.api.nvim_get_option_value("buflisted", { buf = buf }))
+      assert.are.equal(
+        "wipe",
+        vim.api.nvim_get_option_value("bufhidden", { buf = buf })
+      )
+      assert.is_false(vim.api.nvim_get_option_value("swapfile", { buf = buf }))
+      assert.are.equal(
+        "centerpad",
+        vim.api.nvim_get_option_value("filetype", { buf = buf })
+      )
 
       -- Cleanup
       vim.api.nvim_buf_delete(buf, { force = true })
@@ -132,8 +141,150 @@ describe("centerpad.window", function()
         vim.api.nvim_get_option_value("winfixwidth", { win = win })
       )
 
+      local fixbuf_ok, fixbuf =
+        pcall(vim.api.nvim_get_option_value, "winfixbuf", { win = win })
+      if fixbuf_ok then
+        assert.is_true(fixbuf)
+      end
+
+      local cfg = vim.api.nvim_win_get_config(win)
+      assert.is_false(cfg.focusable)
+      assert.are.equal("minimal", cfg.style)
+
       -- Cleanup
       local buf = vim.api.nvim_win_get_buf(win)
+      vim.api.nvim_buf_delete(buf, { force = true })
+    end)
+  end)
+
+  describe("are_pads_valid()", function()
+    it(
+      "should return true when both tracked pads are valid pad buffers",
+      function()
+        local left_win = window.create_pad_window("leftpad", "left", 20)
+        local right_win = window.create_pad_window("rightpad", "right", 20)
+        state.pad_state.left_win = left_win
+        state.pad_state.right_win = right_win
+
+        assert.is_true(window.are_pads_valid())
+
+        vim.api.nvim_buf_delete(
+          vim.api.nvim_win_get_buf(left_win),
+          { force = true }
+        )
+        vim.api.nvim_buf_delete(
+          vim.api.nvim_win_get_buf(right_win),
+          { force = true }
+        )
+      end
+    )
+
+    it("should return false when left pad is missing", function()
+      state.pad_state.left_win = nil
+      state.pad_state.right_win =
+        window.create_pad_window("rightpad", "right", 20)
+
+      assert.is_false(window.are_pads_valid())
+
+      vim.api.nvim_buf_delete(
+        vim.api.nvim_win_get_buf(state.pad_state.right_win),
+        { force = true }
+      )
+    end)
+
+    it(
+      "should return false when a tracked buffer is not a pad buffer",
+      function()
+        local buf1 = vim.api.nvim_create_buf(false, true)
+        local win1 = vim.api.nvim_open_win(buf1, false, {
+          relative = "editor",
+          width = 10,
+          height = 10,
+          row = 0,
+          col = 0,
+        })
+        local buf2 = vim.api.nvim_create_buf(false, true)
+        local win2 = vim.api.nvim_open_win(buf2, false, {
+          relative = "editor",
+          width = 10,
+          height = 10,
+          row = 0,
+          col = 20,
+        })
+
+        state.pad_state.left_win = win1
+        state.pad_state.right_win = win2
+
+        assert.is_false(window.are_pads_valid())
+
+        vim.api.nvim_win_close(win1, true)
+        vim.api.nvim_win_close(win2, true)
+      end
+    )
+  end)
+
+  describe("resize_pad()", function()
+    it("should update pad width and preserve buffer", function()
+      local win = window.create_pad_window("leftpad", "left", 20)
+      local buf = vim.api.nvim_win_get_buf(win)
+      state.pad_state.left_win = win
+
+      local ok = window.resize_pad(win, 40)
+
+      assert.is_true(ok)
+      assert.are.equal(40, vim.api.nvim_win_get_width(win))
+      assert.are.equal(buf, vim.api.nvim_win_get_buf(win))
+
+      vim.api.nvim_buf_delete(buf, { force = true })
+    end)
+
+    it("should return false for invalid window", function()
+      assert.is_false(window.resize_pad(9999, 20))
+    end)
+
+    it("should return false for non-pad buffer", function()
+      local buf = vim.api.nvim_create_buf(false, true)
+      local win = vim.api.nvim_open_win(buf, false, {
+        relative = "editor",
+        width = 10,
+        height = 10,
+        row = 0,
+        col = 0,
+      })
+
+      assert.is_false(window.resize_pad(win, 20))
+
+      vim.api.nvim_win_close(win, true)
+      vim.api.nvim_buf_delete(buf, { force = true })
+    end)
+  end)
+
+  describe("get_pad_width()", function()
+    it("should return width for a valid pad window", function()
+      local win = window.create_pad_window("leftpad", "left", 20)
+      assert.are.equal(20, window.get_pad_width(win))
+
+      local buf = vim.api.nvim_win_get_buf(win)
+      vim.api.nvim_buf_delete(buf, { force = true })
+    end)
+
+    it("should return nil for an invalid window", function()
+      assert.is_nil(window.get_pad_width(9999))
+    end)
+
+    it("should return nil for a non-pad buffer window", function()
+      local buf = vim.api.nvim_create_buf(false, true)
+      local win = vim.api.nvim_open_win(buf, false, {
+        relative = "editor",
+        width = 10,
+        height = 10,
+        row = 0,
+        col = 0,
+      })
+
+      assert.is_nil(window.get_pad_width(win))
+
+      vim.api.nvim_win_close(win, true)
       vim.api.nvim_buf_delete(buf, { force = true })
     end)
   end)
@@ -274,26 +425,13 @@ describe("centerpad.window", function()
       assert.is_nil(state.saved_settings.fillchars)
     end)
 
-    it("should restore lazyredraw when saved", function()
-      local original = vim.o.lazyredraw
-      state.saved_settings.lazyredraw = original
-      vim.o.lazyredraw = not original
-
-      window.restore_global_settings()
-
-      assert.are.equal(original, vim.o.lazyredraw)
-      assert.is_nil(state.saved_settings.lazyredraw)
-    end)
-
     it("should handle missing saved settings gracefully", function()
       state.saved_settings.fillchars = nil
-      state.saved_settings.lazyredraw = nil
 
       -- Should not error
       window.restore_global_settings()
 
       assert.is_nil(state.saved_settings.fillchars)
-      assert.is_nil(state.saved_settings.lazyredraw)
     end)
 
     it("should restore fillchars and clear saved value", function()
@@ -307,42 +445,39 @@ describe("centerpad.window", function()
       assert.is_nil(state.saved_settings.fillchars)
     end)
 
-    it("should restore lazyredraw=true", function()
-      state.saved_settings.lazyredraw = true
-      vim.o.lazyredraw = false
-
-      window.restore_global_settings()
-
-      assert.is_true(vim.o.lazyredraw)
-      assert.is_nil(state.saved_settings.lazyredraw)
-    end)
-
-    it("should restore lazyredraw=false", function()
-      state.saved_settings.lazyredraw = false
-      vim.o.lazyredraw = true
-
-      window.restore_global_settings()
-
-      assert.is_false(vim.o.lazyredraw)
-      assert.is_nil(state.saved_settings.lazyredraw)
-    end)
-
-    it("should restore both fillchars and lazyredraw", function()
-      local saved_fillchars = vim.o.fillchars
-      local saved_lazyredraw = vim.o.lazyredraw
-
-      state.saved_settings.fillchars = saved_fillchars
-      state.saved_settings.lazyredraw = saved_lazyredraw
-
+    it("should restore empty fillchars value", function()
+      local original = vim.o.fillchars
+      state.saved_settings.fillchars = ""
       vim.o.fillchars = "vert:|"
-      vim.o.lazyredraw = not saved_lazyredraw
 
       window.restore_global_settings()
 
-      assert.are.equal(saved_fillchars, vim.o.fillchars)
-      assert.are.equal(saved_lazyredraw, vim.o.lazyredraw)
+      assert.are.equal("", vim.o.fillchars)
       assert.is_nil(state.saved_settings.fillchars)
-      assert.is_nil(state.saved_settings.lazyredraw)
+
+      -- Cleanup
+      vim.o.fillchars = original
+    end)
+
+    it("should clear saved state when fillchars restore fails", function()
+      state.saved_settings.fillchars = "invalid_fillchars_value"
+
+      -- Should not error
+      window.restore_global_settings()
+
+      assert.is_nil(state.saved_settings.fillchars)
+    end)
+
+    it("should handle repeated restore calls without error", function()
+      local original = vim.o.fillchars
+      state.saved_settings.fillchars = original
+      vim.o.fillchars = "vert:|"
+
+      window.restore_global_settings()
+      window.restore_global_settings()
+
+      assert.are.equal(original, vim.o.fillchars)
+      assert.is_nil(state.saved_settings.fillchars)
     end)
   end)
 end)
