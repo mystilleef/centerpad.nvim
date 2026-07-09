@@ -24,46 +24,49 @@ function M.set_current_window(window)
   end
 end
 
+-- Window options to make a pad completely blank regardless of the
+-- user's own global settings. statusline/winbar are global-local
+-- options: an empty string locally means "no override" and silently
+-- falls back to the global value, so both use a single space instead
+-- to force a genuine local override.
+local window_opts = {
+  winfixwidth = true,
+  winfixbuf = true,
+  statusline = " ",
+  winbar = " ",
+  signcolumn = "no",
+  number = false,
+  relativenumber = false,
+  foldcolumn = "0",
+  cursorline = false,
+  cursorcolumn = false,
+  list = false,
+  spell = false,
+  colorcolumn = "",
+  wrap = false,
+  linebreak = false,
+  conceallevel = 0,
+}
+
+-- Buffer options: unlisted, unmodifiable, wiped on hide.
+local buffer_opts = {
+  filetype = "centerpad",
+  buftype = "nofile",
+  bufhidden = "wipe",
+  modifiable = false,
+  readonly = true,
+  buflisted = false,
+  swapfile = false,
+}
+
 -- Set all required options for a pad buffer/window
 local function set_pad_options(window, buffer)
-  -- Window options
-  pcall(vim.api.nvim_set_option_value, "winfixwidth", true, { win = window })
-  pcall(vim.api.nvim_set_option_value, "winfixbuf", true, { win = window })
-
-  -- Disable ALL UI elements to ensure completely blank pads
-  pcall(vim.api.nvim_set_option_value, "statusline", " ", { win = window })
-  pcall(vim.api.nvim_set_option_value, "winbar", "", { win = window })
-  pcall(vim.api.nvim_set_option_value, "signcolumn", "no", { win = window })
-  pcall(vim.api.nvim_set_option_value, "number", false, { win = window })
-  pcall(
-    vim.api.nvim_set_option_value,
-    "relativenumber",
-    false,
-    { win = window }
-  )
-  pcall(vim.api.nvim_set_option_value, "foldcolumn", "0", { win = window })
-  pcall(vim.api.nvim_set_option_value, "cursorline", false, { win = window })
-  pcall(vim.api.nvim_set_option_value, "cursorcolumn", false, { win = window })
-  pcall(vim.api.nvim_set_option_value, "list", false, { win = window })
-  pcall(vim.api.nvim_set_option_value, "spell", false, { win = window })
-  pcall(vim.api.nvim_set_option_value, "colorcolumn", "", { win = window })
-  pcall(vim.api.nvim_set_option_value, "wrap", false, { win = window })
-  pcall(vim.api.nvim_set_option_value, "linebreak", false, { win = window })
-  pcall(vim.api.nvim_set_option_value, "conceallevel", 0, { win = window })
-
-  -- Buffer options
-  pcall(
-    vim.api.nvim_set_option_value,
-    "filetype",
-    "centerpad",
-    { buf = buffer }
-  )
-  pcall(vim.api.nvim_set_option_value, "buftype", "nofile", { buf = buffer })
-  pcall(vim.api.nvim_set_option_value, "bufhidden", "wipe", { buf = buffer })
-  pcall(vim.api.nvim_set_option_value, "modifiable", false, { buf = buffer })
-  pcall(vim.api.nvim_set_option_value, "readonly", true, { buf = buffer })
-  pcall(vim.api.nvim_set_option_value, "buflisted", false, { buf = buffer })
-  pcall(vim.api.nvim_set_option_value, "swapfile", false, { buf = buffer })
+  for name, value in pairs(window_opts) do
+    pcall(vim.api.nvim_set_option_value, name, value, { win = window })
+  end
+  for name, value in pairs(buffer_opts) do
+    pcall(vim.api.nvim_set_option_value, name, value, { buf = buffer })
+  end
 end
 
 -- Pad-local fillchars value

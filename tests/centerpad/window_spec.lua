@@ -147,6 +147,45 @@ describe("centerpad.window", function()
         assert.is_true(fixbuf)
       end
 
+      assert.are.equal(
+        " ",
+        vim.api.nvim_get_option_value("statusline", { win = win })
+      )
+      assert.are.equal(
+        " ",
+        vim.api.nvim_get_option_value("winbar", { win = win })
+      )
+      assert.are.equal(
+        "no",
+        vim.api.nvim_get_option_value("signcolumn", { win = win })
+      )
+      assert.is_false(vim.api.nvim_get_option_value("number", { win = win }))
+      assert.is_false(
+        vim.api.nvim_get_option_value("relativenumber", { win = win })
+      )
+      assert.are.equal(
+        "0",
+        vim.api.nvim_get_option_value("foldcolumn", { win = win })
+      )
+      assert.is_false(
+        vim.api.nvim_get_option_value("cursorline", { win = win })
+      )
+      assert.is_false(
+        vim.api.nvim_get_option_value("cursorcolumn", { win = win })
+      )
+      assert.is_false(vim.api.nvim_get_option_value("list", { win = win }))
+      assert.is_false(vim.api.nvim_get_option_value("spell", { win = win }))
+      assert.are.equal(
+        "",
+        vim.api.nvim_get_option_value("colorcolumn", { win = win })
+      )
+      assert.is_false(vim.api.nvim_get_option_value("wrap", { win = win }))
+      assert.is_false(vim.api.nvim_get_option_value("linebreak", { win = win }))
+      assert.are.equal(
+        0,
+        vim.api.nvim_get_option_value("conceallevel", { win = win })
+      )
+
       local cfg = vim.api.nvim_win_get_config(win)
       assert.is_false(cfg.focusable)
       assert.are.equal("minimal", cfg.style)
@@ -155,6 +194,37 @@ describe("centerpad.window", function()
       local buf = vim.api.nvim_win_get_buf(win)
       vim.api.nvim_buf_delete(buf, { force = true })
     end)
+
+    it(
+      "should override winbar and statusline even when globals are non-empty",
+      function()
+        -- statusline and winbar are global-local options: an empty
+        -- local value means "no override" and falls back to the
+        -- global value. A naive assert against an empty global
+        -- baseline would not catch that fallback, so pre-set
+        -- non-empty sentinels here to force the real behavior.
+        local original_winbar = vim.o.winbar
+        local original_statusline = vim.o.statusline
+
+        vim.o.winbar = "GLOBAL-WINBAR-SENTINEL"
+        vim.o.statusline = "GLOBAL-STATUSLINE-SENTINEL"
+
+        local win = window.create_pad_window("testpad", "left", 20)
+        local winbar = vim.api.nvim_get_option_value("winbar", { win = win })
+        local statusline =
+          vim.api.nvim_get_option_value("statusline", { win = win })
+
+        vim.o.winbar = original_winbar
+        vim.o.statusline = original_statusline
+
+        assert.are.equal(" ", winbar)
+        assert.are.equal(" ", statusline)
+
+        -- Cleanup
+        local buf = vim.api.nvim_win_get_buf(win)
+        vim.api.nvim_buf_delete(buf, { force = true })
+      end
+    )
   end)
 
   describe("are_pads_valid()", function()
