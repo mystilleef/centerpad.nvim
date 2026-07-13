@@ -13,7 +13,23 @@
 - **Format**: `stylua .` (80 col width, 2 spaces, double quotes)
 - **Lint**: `luacheck .` (allows vim _globals_)
 - **Type check**: `selene .` (vim std library)
-- No test suite currently exists
+- **Test**: `make test` (runs busted test suite)
+
+### Test Suite
+
+The project has comprehensive test coverage:
+
+- `state_spec.lua` – State management and tab isolation
+- `window_spec.lua` – Window creation, fillchars, and cleanup
+- `autocmds_spec.lua` – Autocmd lifecycle and callbacks
+- `centerpad_spec.lua` – Coordinator guards and command behavior
+- `enabled_spec.lua` – Global mirror contract and legacy bridge
+- `fillchars_spec.lua` – Window-local fillchars isolation
+- `health_spec.lua` – Health check and debug reporting
+- `integration_spec.lua` – Cross-tab isolation and stress coverage
+- `buffer_tracker_spec.lua` – Context suspend/resume behavior
+- `smoke_report_spec.lua` – Smoke and terminal report helpers
+- `verify_completion_spec.lua` – Completion verification helpers
 
 ## Code style
 

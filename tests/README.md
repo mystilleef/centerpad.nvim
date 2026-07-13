@@ -7,19 +7,31 @@ busted testing framework.
 
 ```
 tests/
-├── minimal_init.lua          # Minimal Neovim config for testing
-├── run_all.lua              # Simple test file loader
-├── README.md                # This file
+├── minimal_init.lua           # Minimal Neovim config for testing
+├── run_all.lua                # Simple test file loader
+├── simple_runner.lua          # Alternative runner
+├── smoke_report.lua           # Smoke report generation
+├── terminal_smoke.lua         # Terminal smoke tests
+├── verify_completion.lua      # Completion verification
+├── verify_smoke_report.lua    # Smoke report verification
+├── README.md                  # This file
 └── centerpad/
-    ├── state_spec.lua       # Tests for state module
-    ├── window_spec.lua      # Tests for window module
-    ├── autocmds_spec.lua    # Tests for autocmds module
-    └── centerpad_spec.lua   # Tests for main coordinator
+    ├── state_spec.lua           # State management and tab isolation
+    ├── window_spec.lua          # Window creation, fillchars, cleanup
+    ├── autocmds_spec.lua        # Autocmd lifecycle and callbacks
+    ├── centerpad_spec.lua       # Coordinator guards and commands
+    ├── enabled_spec.lua         # Global mirror and legacy bridge
+    ├── fillchars_spec.lua       # Window-local fillchars isolation
+    ├── health_spec.lua          # Health check and debug reporting
+    ├── integration_spec.lua     # Cross-tab isolation and stress
+    ├── buffer_tracker_spec.lua  # Context suspend/resume behavior
+    ├── smoke_report_spec.lua    # Smoke report helpers
+    └── verify_completion_spec.lua  # Completion verification helpers
 ```
 
 ## Running Tests
 
-### Option 1: Using Busted (Recommended)
+### Using Busted (Recommended)
 
 If you have `busted` and `nlua` installed:
 
@@ -29,28 +41,18 @@ luarocks install busted
 luarocks install nlua
 
 # Run all tests
-busted tests/
-
-# Or use make
 make test
+
+# Or directly
+busted tests/
 ```
 
-### Option 2: Using Plenary (Alternative)
+### Using Plenary (Alternative)
 
 If you have plenary.nvim installed:
 
 ```bash
 nvim --headless -c "PlenaryBustedDirectory tests/ { minimal_init = 'tests/minimal_init.lua' }" -c "qa!"
-```
-
-### Option 3: Manual Testing in Neovim
-
-You can also source test files directly in Neovim:
-
-```vim
-:source tests/centerpad/state_spec.lua
-:source tests/centerpad/window_spec.lua
-" etc.
 ```
 
 ## Test Coverage
@@ -62,6 +64,8 @@ You can also source test files directly in Neovim:
 - ✓ `pads_exist()` logic with various scenarios
 - ✓ State validation with issue detection
 - ✓ Debug logging functionality
+- ✓ Tab-scoped state proxy
+- ✓ Invalid tab pruning
 
 ### window_spec.lua (Window Manipulation)
 
@@ -70,7 +74,7 @@ You can also source test files directly in Neovim:
 - ✓ Pad window creation with correct properties
 - ✓ Buffer/window option verification
 - ✓ Pad deletion (O(1) using tracked IDs)
-- ✓ Global settings save/restore
+- ✓ Window-local fillchars
 
 ### autocmds_spec.lua (Autocmd Management)
 
@@ -79,6 +83,8 @@ You can also source test files directly in Neovim:
 - ✓ Restore autocmd with debouncing
 - ✓ Autocmd cleanup
 - ✓ Full cleanup (autocmds + pads + settings)
+- ✓ Coordinator callback injection
+- ✓ Timer stop ordering
 
 ### centerpad_spec.lua (Main Coordinator)
 
@@ -90,6 +96,45 @@ You can also source test files directly in Neovim:
 - ✓ Debug mode management
 - ✓ State inspection (`get_state()`)
 - ✓ State validation
+
+### enabled_spec.lua (Enabled State)
+
+- ✓ Global mirror contract
+- ✓ Legacy bridge behavior
+- ✓ Per-tab truth from Centerpad state
+
+### fillchars_spec.lua (Fillchars)
+
+- ✓ Window-local fillchars isolation
+- ✓ Global fillchars unchanged
+- ✓ Cleanup behavior
+
+### health_spec.lua (Health Checks)
+
+- ✓ Current-tab reporting
+- ✓ Debug state inspection
+
+### integration_spec.lua (Integration)
+
+- ✓ Independent tab widths
+- ✓ Cross-tab pad validity
+- ✓ Tab-close pruning
+- ✓ Suspend/resume behavior
+- ✓ Stress stability
+
+### buffer_tracker_spec.lua (Context Tracker)
+
+- ✓ Suspend on ignored contexts
+- ✓ Resume on normal contexts
+- ✓ Debounce behavior
+
+### smoke_report_spec.lua (Smoke Reports)
+
+- ✓ Report generation helpers
+
+### verify_completion_spec.lua (Completion)
+
+- ✓ Completion verification helpers
 
 ## Writing New Tests
 
