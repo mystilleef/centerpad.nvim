@@ -204,6 +204,77 @@ describe("centerpad.fillchars", function()
       assert.is_not.equal("", local_fc)
     end)
 
+    it("should not blank fold/diff/eob fillchars on source window", function()
+      vim.bo.filetype = ""
+      vim.bo.buftype = ""
+
+      local config = {
+        ignore_filetypes = {},
+        ignore_buftypes = {},
+        leftpad = 20,
+        rightpad = 20,
+      }
+
+      centerpad.enable(config)
+      vim.wait(50)
+
+      local source_win = state.pad_state.main_win
+      assert.is_not_nil(source_win)
+
+      local local_fc = vim.api.nvim_get_option_value(
+        "fillchars",
+        { win = source_win, scope = "local" }
+      )
+
+      -- Only the source/pad border separators should be forced blank;
+      -- fold and diff rendering must stay native in the user's window.
+      assert.is_nil(local_fc:find("fold:", 1, true))
+      assert.is_nil(local_fc:find("foldopen:", 1, true))
+      assert.is_nil(local_fc:find("foldclose:", 1, true))
+      assert.is_nil(local_fc:find("foldsep:", 1, true))
+      assert.is_nil(local_fc:find("diff:", 1, true))
+      assert.is_nil(local_fc:find("eob:", 1, true))
+    end)
+
+    it(
+      "preserves the user's custom global fold/diff/eob symbols on "
+        .. "the source window",
+      function()
+        vim.bo.filetype = ""
+        vim.bo.buftype = ""
+
+        local saved = vim.go.fillchars
+        vim.go.fillchars = "fold:x,foldopen:>,foldclose:<,eob:y,diff:z"
+
+        local config = {
+          ignore_filetypes = {},
+          ignore_buftypes = {},
+          leftpad = 20,
+          rightpad = 20,
+        }
+
+        centerpad.enable(config)
+        vim.wait(50)
+
+        local source_win = state.pad_state.main_win
+        assert.is_not_nil(source_win)
+
+        -- Effective value (local override merged over what it started
+        -- from), not scope="local", since that's what actually renders.
+        local local_fc =
+          vim.api.nvim_get_option_value("fillchars", { win = source_win })
+
+        assert.is_not_nil(local_fc:find("fold:x", 1, true))
+        assert.is_not_nil(local_fc:find("foldopen:>", 1, true))
+        assert.is_not_nil(local_fc:find("foldclose:<", 1, true))
+        assert.is_not_nil(local_fc:find("eob:y", 1, true))
+        assert.is_not_nil(local_fc:find("diff:z", 1, true))
+
+        centerpad.disable()
+        vim.go.fillchars = saved
+      end
+    )
+
     it("should clear source window-local fillchars during cleanup", function()
       vim.bo.filetype = ""
       vim.bo.buftype = ""
@@ -538,6 +609,12 @@ describe("centerpad.fillchars", function()
       assert.is_not.equal("", left_fc)
       assert.is_not.equal("", right_fc)
       assert.are.equal(left_fc, right_fc)
+
+      -- Pads hold an empty scratch buffer, so unlike the source window
+      -- they should stay fully blanked, fold/diff/eob included.
+      assert.is_not_nil(left_fc:find("fold:", 1, true))
+      assert.is_not_nil(left_fc:find("eob:", 1, true))
+      assert.is_not_nil(left_fc:find("diff:", 1, true))
     end)
 
     it(

@@ -158,6 +158,56 @@ local PAD_FILLCHARS = table.concat({
   "verthoriz: ",
 }, ",")
 
+-- Border-separator keys to blank on the source window so the pad reads
+-- as a seamless margin. Items a window's local "fillchars" omits fall
+-- back to Neovim's hardcoded per-item default (see :h 'fillchars'), NOT
+-- the user's global custom value — so these keys are merged on top of
+-- the window's current effective value rather than set standalone,
+-- preserving any custom fold/diff/eob symbols the user has configured.
+local SOURCE_BORDER_KEYS = {
+  "vert",
+  "horiz",
+  "horizup",
+  "horizdown",
+  "vertleft",
+  "vertright",
+  "verthoriz",
+}
+
+local function parse_fillchars(value)
+  local items = {}
+  if not value or value == "" then
+    return items
+  end
+  for item in value:gmatch("[^,]+") do
+    local key, char = item:match("^([^:]+):(.*)$")
+    if key then
+      items[key] = char
+    end
+  end
+  return items
+end
+
+local function serialize_fillchars(items)
+  local parts = {}
+  for key, char in pairs(items) do
+    parts[#parts + 1] = key .. ":" .. char
+  end
+  table.sort(parts)
+  return table.concat(parts, ",")
+end
+
+-- Builds the source window's local fillchars by blanking only the
+-- border-separator keys on top of `base` (the window's current
+-- effective fillchars), so every other item keeps its existing value.
+local function build_source_fillchars(base)
+  local items = parse_fillchars(base)
+  for _, key in ipairs(SOURCE_BORDER_KEYS) do
+    items[key] = " "
+  end
+  return serialize_fillchars(items)
+end
+
 local function configure_pad(win, buffer, size)
   set_pad_options(win, buffer)
 
@@ -328,10 +378,21 @@ function M.apply_source_fillchars(win)
     return false
   end
 
+  -- No scope: the value currently in effect for this window (local if
+  -- already set, else the user's global custom fillchars). Used as the
+  -- base so non-separator items keep whatever they already render as.
+  local effective_ok, effective =
+    pcall(vim.api.nvim_get_option_value, "fillchars", { win = win })
+  if not effective_ok then
+    state.log_error("apply_source_fillchars", effective)
+    clear_source_options()
+    return false
+  end
+
   local ok, err = pcall(
     vim.api.nvim_set_option_value,
     "fillchars",
-    PAD_FILLCHARS,
+    build_source_fillchars(effective),
     { win = win }
   )
   if not ok then
