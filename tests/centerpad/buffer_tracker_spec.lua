@@ -98,13 +98,15 @@ describe("centerpad.buffer_tracker", function()
       assert.is_true(state.tracker.suspended)
     end)
 
-    it("suspends pads when switching to floating window", function()
+    it("does not suspend pads when switching to floating window", function()
       local config = default_config()
       enable_with_tracker(config)
 
       assert.is_true(state.pad_state.enabled)
+      local left_win = state.pad_state.left_win
+      local right_win = state.pad_state.right_win
 
-      -- Open and focus a floating window
+      -- Open and focus a floating window (e.g. a Telescope-style dialog)
       local float_buf = vim.api.nvim_create_buf(false, true)
       local float_win = vim.api.nvim_open_win(float_buf, true, {
         relative = "editor",
@@ -115,13 +117,51 @@ describe("centerpad.buffer_tracker", function()
       })
       vim.wait(150)
 
-      assert.is_false(state.pad_state.enabled)
-      assert.is_falsy(state.pads_exist())
-      assert.is_true(state.tracker.suspended)
+      -- Floats overlay the layout; pads underneath must stay untouched
+      assert.is_true(state.pad_state.enabled)
+      assert.is_true(state.pads_exist())
+      assert.is_false(state.tracker.suspended)
+      assert.are.equal(left_win, state.pad_state.left_win)
+      assert.are.equal(right_win, state.pad_state.right_win)
 
       pcall(vim.api.nvim_win_close, float_win, true)
       vim.api.nvim_buf_delete(float_buf, { force = true })
     end)
+
+    it(
+      "does not suspend pads for a floating window with an ignored "
+        .. "buftype (Telescope-style prompt)",
+      function()
+        local config = default_config()
+        enable_with_tracker(config)
+
+        assert.is_true(state.pad_state.enabled)
+        local left_win = state.pad_state.left_win
+        local right_win = state.pad_state.right_win
+
+        -- Telescope's prompt/results/preview windows are floating AND
+        -- carry an ignored buftype; floating must win regardless.
+        local float_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_set_option_value("buftype", "prompt", { buf = float_buf })
+        local float_win = vim.api.nvim_open_win(float_buf, true, {
+          relative = "editor",
+          width = 10,
+          height = 10,
+          row = 0,
+          col = 0,
+        })
+        vim.wait(150)
+
+        assert.is_true(state.pad_state.enabled)
+        assert.is_true(state.pads_exist())
+        assert.is_false(state.tracker.suspended)
+        assert.are.equal(left_win, state.pad_state.left_win)
+        assert.are.equal(right_win, state.pad_state.right_win)
+
+        pcall(vim.api.nvim_win_close, float_win, true)
+        vim.api.nvim_buf_delete(float_buf, { force = true })
+      end
+    )
 
     it(
       "suspends pads when entering an ignored context buffer directly",
@@ -210,32 +250,40 @@ describe("centerpad.buffer_tracker", function()
       )
     end)
 
-    it("resumes after floating window is closed", function()
-      local config = default_config()
-      enable_with_tracker(config)
+    it(
+      "keeps pads stable across a floating window's open-close cycle",
+      function()
+        local config = default_config()
+        enable_with_tracker(config)
 
-      -- Suspend via floating window
-      local float_buf = vim.api.nvim_create_buf(false, true)
-      local float_win = vim.api.nvim_open_win(float_buf, true, {
-        relative = "editor",
-        width = 10,
-        height = 10,
-        row = 0,
-        col = 0,
-      })
-      vim.wait(150)
+        local left_win = state.pad_state.left_win
+        local right_win = state.pad_state.right_win
 
-      assert.is_false(state.pad_state.enabled)
-      assert.is_true(state.tracker.suspended)
+        -- Open a floating window; nothing should have been suspended
+        local float_buf = vim.api.nvim_create_buf(false, true)
+        local float_win = vim.api.nvim_open_win(float_buf, true, {
+          relative = "editor",
+          width = 10,
+          height = 10,
+          row = 0,
+          col = 0,
+        })
+        vim.wait(150)
 
-      -- Close floating window - should return focus to normal source
-      vim.api.nvim_win_close(float_win, true)
-      vim.wait(150)
+        assert.is_true(state.pad_state.enabled)
+        assert.is_false(state.tracker.suspended)
 
-      assert.is_true(state.pad_state.enabled)
-      assert.is_true(state.pads_exist())
-      assert.is_false(state.tracker.suspended)
-    end)
+        -- Close floating window - should return focus to normal source
+        vim.api.nvim_win_close(float_win, true)
+        vim.wait(150)
+
+        assert.is_true(state.pad_state.enabled)
+        assert.is_true(state.pads_exist())
+        assert.is_false(state.tracker.suspended)
+        assert.are.equal(left_win, state.pad_state.left_win)
+        assert.are.equal(right_win, state.pad_state.right_win)
+      end
+    )
   end)
 
   describe("no auto-enable without opt-in", function()

@@ -326,17 +326,14 @@ function M.clear_autocmds(tab)
 end
 
 -- Validates whether the current buffer/window context is eligible for
--- centerpad tracking (not ignored filetype/buftype, not floating, not
--- a pad buffer).
+-- centerpad tracking (not ignored filetype/buftype, not a pad buffer).
+-- Floating windows are handled separately by decide_tracker_action, since
+-- they overlay the tabpage without altering the source's split layout.
 local function is_valid_context(config)
   local buf = vim.api.nvim_get_current_buf()
   local win = vim.api.nvim_get_current_win()
 
   if window.is_buffer_ignored(buf, config) then
-    return false
-  end
-
-  if window.is_floating(win) then
     return false
   end
 
@@ -351,6 +348,13 @@ end
 -- Returns "resume", "suspend", or nil based on context validity and
 -- current tracker/pad state.  Pure decision — no side effects.
 local function decide_tracker_action(tracker, config)
+  -- Floating windows (pickers, dialogs, etc.) overlay the tabpage without
+  -- replacing the source's split layout, so focusing one is a no-op: the
+  -- pads stay exactly as they were underneath it.
+  if window.is_floating(vim.api.nvim_get_current_win()) then
+    return nil
+  end
+
   local valid = is_valid_context(config)
   if
     valid
