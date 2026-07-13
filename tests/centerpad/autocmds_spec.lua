@@ -23,11 +23,21 @@ describe("centerpad.autocmds", function()
     autocmds.cleanup()
   end)
 
-  describe("padgroup", function()
-    it("should have a valid autocmd group", function()
-      assert.is_not_nil(autocmds.padgroup)
-      assert.are.equal("number", type(autocmds.padgroup))
+  describe("get_padgroup()", function()
+    it("returns a valid autocmd group id", function()
+      local grp = autocmds.get_padgroup()
+      assert.is_not_nil(grp)
+      assert.are.equal("number", type(grp))
     end)
+
+    it(
+      "returns the same group id on repeated calls for the same tab",
+      function()
+        local first = autocmds.get_padgroup()
+        local second = autocmds.get_padgroup()
+        assert.are.equal(first, second)
+      end
+    )
   end)
 
   describe("setup_prevent_focus_autocmd()", function()
@@ -35,11 +45,13 @@ describe("centerpad.autocmds", function()
       local buf = vim.api.nvim_create_buf(false, true)
       vim.api.nvim_buf_set_var(buf, "is_centerpad", true)
 
-      autocmds.setup_prevent_focus_autocmd(buf, "left")
+      autocmds.setup_prevent_focus_autocmd(buf)
 
       -- Check that autocmds exist for the group
-      local aucmds =
-        vim.api.nvim_get_autocmds({ group = autocmds.padgroup, buffer = buf })
+      local aucmds = vim.api.nvim_get_autocmds({
+        group = autocmds.get_padgroup(),
+        buffer = buf,
+      })
       assert.is_true(#aucmds > 0)
 
       -- Cleanup
@@ -48,7 +60,7 @@ describe("centerpad.autocmds", function()
 
     it("should error gracefully when given invalid buffer", function()
       -- Neovim will error on invalid buffer, but we expect it to be caught
-      local ok = pcall(autocmds.setup_prevent_focus_autocmd, 9999, "left")
+      local ok = pcall(autocmds.setup_prevent_focus_autocmd, 9999)
       -- Either succeeds (some versions) or fails gracefully
       assert.is_not_nil(ok)
     end)
@@ -75,7 +87,7 @@ describe("centerpad.autocmds", function()
         col = 0,
       })
 
-      autocmds.setup_prevent_focus_autocmd(pad_buf, "left")
+      autocmds.setup_prevent_focus_autocmd(pad_buf)
 
       -- Switch to pad window and process events immediately
       vim.api.nvim_set_current_win(pad_win)
@@ -97,7 +109,7 @@ describe("centerpad.autocmds", function()
 
       state.pad_state.main_win = 9999 -- Invalid window
 
-      autocmds.setup_prevent_focus_autocmd(pad_buf, "left")
+      autocmds.setup_prevent_focus_autocmd(pad_buf)
 
       -- Create a pad window
       local pad_win = vim.api.nvim_open_win(pad_buf, false, {
@@ -133,7 +145,7 @@ describe("centerpad.autocmds", function()
 
       -- Check that WinClosed autocmds exist
       local aucmds = vim.api.nvim_get_autocmds({
-        group = autocmds.padgroup,
+        group = autocmds.get_padgroup(),
         event = "WinClosed",
       })
       assert.is_true(#aucmds > 0)
@@ -407,8 +419,8 @@ describe("centerpad.autocmds", function()
       vim.api.nvim_win_close(win1, true)
 
       -- Verify timer is set
-      assert.is_not_nil(state.restore_timer)
-      local first_timer = state.restore_timer
+      assert.is_not_nil(state.get_restore_timer())
+      local first_timer = state.get_restore_timer()
 
       -- Immediately create and close another window
       local buf2 = vim.api.nvim_create_buf(false, true)
@@ -423,66 +435,32 @@ describe("centerpad.autocmds", function()
       vim.api.nvim_win_close(win2, true)
 
       -- Timer should be different (old one cancelled)
-      assert.is_not_nil(state.restore_timer)
-      assert.are_not.equal(first_timer, state.restore_timer)
+      assert.is_not_nil(state.get_restore_timer())
+      assert.are_not.equal(first_timer, state.get_restore_timer())
 
       vim.wait(200)
 
       -- Callback should still have been called once
       assert.is_true(callback_called)
     end)
-
-    it("should restore fillchars after WinClosed recovery cleanup", function()
-      local config = {
-        ignore_filetypes = {},
-        ignore_buftypes = {},
-        leftpad = 25,
-        rightpad = 25,
-      }
-      local enable_callback = function() end
-
-      state.pad_state.enabled = true
-
-      local original = vim.o.fillchars
-      state.saved_settings.fillchars = original
-      vim.o.fillchars = "vert:|"
-
-      autocmds.setup_restore_pads_autocmd(config, enable_callback)
-
-      local buf = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_set_option_value("buftype", "", { buf = buf })
-      local win = vim.api.nvim_open_win(buf, false, {
-        relative = "editor",
-        width = 10,
-        height = 10,
-        row = 0,
-        col = 0,
-      })
-      vim.api.nvim_win_close(win, true)
-
-      -- Wait for debounce + timer
-      vim.wait(200)
-
-      -- fillchars should be restored
-      assert.are.equal(original, vim.o.fillchars)
-      assert.is_nil(state.saved_settings.fillchars)
-    end)
   end)
 
   describe("clear_autocmds()", function()
     it("should clear all autocmds in the group", function()
       local buf = vim.api.nvim_create_buf(false, true)
-      autocmds.setup_prevent_focus_autocmd(buf, "left")
+      autocmds.setup_prevent_focus_autocmd(buf)
 
       -- Verify autocmds exist
-      local before = vim.api.nvim_get_autocmds({ group = autocmds.padgroup })
+      local before =
+        vim.api.nvim_get_autocmds({ group = autocmds.get_padgroup() })
       assert.is_true(#before > 0)
 
       -- Clear
       autocmds.clear_autocmds()
 
       -- Verify autocmds are gone
-      local after = vim.api.nvim_get_autocmds({ group = autocmds.padgroup })
+      local after =
+        vim.api.nvim_get_autocmds({ group = autocmds.get_padgroup() })
       assert.are.equal(0, #after)
 
       -- Cleanup
@@ -493,11 +471,12 @@ describe("centerpad.autocmds", function()
   describe("cleanup()", function()
     it("should clear autocmds", function()
       local buf = vim.api.nvim_create_buf(false, true)
-      autocmds.setup_prevent_focus_autocmd(buf, "left")
+      autocmds.setup_prevent_focus_autocmd(buf)
 
       autocmds.cleanup()
 
-      local aucmds = vim.api.nvim_get_autocmds({ group = autocmds.padgroup })
+      local aucmds =
+        vim.api.nvim_get_autocmds({ group = autocmds.get_padgroup() })
       assert.are.equal(0, #aucmds)
 
       vim.api.nvim_buf_delete(buf, { force = true })
@@ -514,16 +493,24 @@ describe("centerpad.autocmds", function()
       assert.is_nil(state.pad_state.right_win)
     end)
 
-    it("should restore global settings", function()
-      local original = vim.o.fillchars
-      state.saved_settings.fillchars = original
-      -- Use valid fillchars value
-      vim.o.fillchars = "vert:|"
+    it("should clear captured source_options metadata", function()
+      local buf = vim.api.nvim_create_buf(false, true)
+      local win = vim.api.nvim_open_win(buf, false, {
+        relative = "editor",
+        width = 10,
+        height = 10,
+        row = 0,
+        col = 0,
+      })
+      state.source_options.win = win
+      state.source_options.fillchars = "fold: "
 
       autocmds.cleanup()
 
-      assert.are.equal(original, vim.o.fillchars)
-      assert.is_nil(state.saved_settings.fillchars)
+      assert.is_nil(state.source_options.win)
+      assert.is_nil(state.source_options.fillchars)
+
+      vim.api.nvim_win_close(win, true)
     end)
 
     it("should set enabled to false", function()
@@ -539,23 +526,20 @@ describe("centerpad.autocmds", function()
     end)
 
     it("should cancel pending timer", function()
-      state.restore_timer = vim.fn.timer_start(1000, function() end)
+      state.set_restore_timer(vim.fn.timer_start(1000, function() end))
 
       autocmds.cleanup()
 
-      assert.is_nil(state.restore_timer)
+      assert.is_nil(state.get_restore_timer())
     end)
 
     it("should handle repeated cleanup calls without error", function()
       state.pad_state.enabled = true
-      state.saved_settings.fillchars = vim.o.fillchars
-      vim.o.fillchars = "vert:|"
 
       autocmds.cleanup()
       autocmds.cleanup()
 
       assert.is_false(state.pad_state.enabled)
-      assert.is_nil(state.saved_settings.fillchars)
     end)
   end)
 
@@ -577,6 +561,12 @@ describe("centerpad.autocmds", function()
       centerpad.enable(config)
       vim.wait(100)
       autocmds.clear_autocmds()
+      -- The context/buffer tracker installed by a real enable() survives
+      -- clear_autocmds (it lives on the persistent centerpad_tracker
+      -- group) and would otherwise race the WinClosed recovery under
+      -- test here with its own suspend/resume cycle. That behavior has
+      -- its own dedicated coverage in buffer_tracker_spec.lua.
+      autocmds.clear_tracker()
     end
 
     local function track_callback()
@@ -636,7 +626,6 @@ describe("centerpad.autocmds", function()
         local right_win = state.pad_state.right_win
         local left_buf = vim.api.nvim_win_get_buf(left_win)
         local right_buf = vim.api.nvim_win_get_buf(right_win)
-        local saved_fillchars = state.saved_settings.fillchars
 
         local callback, tracker = track_callback()
         autocmds.setup_restore_pads_autocmd(config, callback)
@@ -665,8 +654,6 @@ describe("centerpad.autocmds", function()
         )
         assert.is_true(state.pad_state.enabled)
         assert.is_true(vim.g.centerpad_enabled)
-        assert.is_not_nil(state.saved_settings.fillchars)
-        assert.are.equal(saved_fillchars, state.saved_settings.fillchars)
       end
     )
 
@@ -726,7 +713,6 @@ describe("centerpad.autocmds", function()
         local right_win = state.pad_state.right_win
         local left_buf = vim.api.nvim_win_get_buf(left_win)
         local right_buf = vim.api.nvim_win_get_buf(right_win)
-        local saved_fillchars = state.saved_settings.fillchars
 
         local callback_count = 0
         local function callback()
@@ -760,8 +746,6 @@ describe("centerpad.autocmds", function()
         )
         assert.is_true(state.pad_state.enabled)
         assert.is_true(vim.g.centerpad_enabled)
-        assert.is_not_nil(state.saved_settings.fillchars)
-        assert.are.equal(saved_fillchars, state.saved_settings.fillchars)
       end
     )
 
@@ -1147,10 +1131,7 @@ describe("centerpad.autocmds", function()
         leftpad = 25,
         rightpad = 25,
       }
-      local original_fillchars = vim.o.fillchars
       setup_enabled_pads(config)
-      vim.o.fillchars = "vert:|"
-      state.saved_settings.fillchars = original_fillchars
 
       local left_buf = vim.api.nvim_win_get_buf(state.pad_state.left_win)
       vim.api.nvim_buf_set_var(left_buf, "is_centerpad", false)
@@ -1175,13 +1156,11 @@ describe("centerpad.autocmds", function()
       assert.is_false(state.pad_state.enabled)
       assert.is_false(vim.g.centerpad_enabled)
       assert.is_false(vim.g.center_buf_enabled)
-      assert.is_nil(state.saved_settings.fillchars)
-      assert.is_nil(state.restore_timer)
+      assert.is_nil(state.get_restore_timer())
       assert.are.equal(
         0,
-        #vim.api.nvim_get_autocmds({ group = autocmds.padgroup })
+        #vim.api.nvim_get_autocmds({ group = autocmds.get_padgroup() })
       )
-      assert.are.equal(original_fillchars, vim.o.fillchars)
     end)
 
     it("debounces recovery to one callback for unstable pads", function()
@@ -1251,7 +1230,7 @@ describe("centerpad.autocmds", function()
         vim.api.nvim_win_get_width(state.pad_state.right_win)
       )
       assert.is_true(is_source_window_focused())
-      assert.is_nil(state.restore_timer)
+      assert.is_nil(state.get_restore_timer())
     end)
 
     it(
@@ -1276,7 +1255,7 @@ describe("centerpad.autocmds", function()
           state.pad_state.main_win,
           vim.api.nvim_get_current_win()
         )
-        assert.is_nil(state.restore_timer)
+        assert.is_nil(state.get_restore_timer())
       end
     )
 
@@ -1314,7 +1293,7 @@ describe("centerpad.autocmds", function()
           vim.api.nvim_win_get_width(state.pad_state.right_win)
         )
         assert.is_true(is_source_window_focused())
-        assert.is_nil(state.restore_timer)
+        assert.is_nil(state.get_restore_timer())
       end
     )
   end)

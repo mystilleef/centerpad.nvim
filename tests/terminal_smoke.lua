@@ -29,7 +29,7 @@ end
 
 local function wait_for_timer()
   vim.wait(200, function()
-    return state.restore_timer == nil
+    return state.get_restore_timer() == nil
   end, 10)
 end
 
@@ -57,7 +57,7 @@ end
 
 local function count_autocmds()
   local ok, autocmd_list = pcall(vim.api.nvim_get_autocmds, {
-    group = autocmds.padgroup,
+    group = autocmds.get_padgroup(),
   })
   if not ok then
     return 0
@@ -260,7 +260,7 @@ record(
     and right_w == 30
     and fresh_ids
     and is_source_focused()
-    and state.restore_timer == nil,
+    and state.get_restore_timer() == nil,
   string.format(
     "valid=%s left=%s right=%s fresh_ids=%s source_focused=%s timer=%s",
     window.are_pads_valid(),
@@ -268,7 +268,7 @@ record(
     right_w,
     fresh_ids,
     is_source_focused(),
-    state.restore_timer
+    state.get_restore_timer()
   )
 )
 
@@ -288,7 +288,7 @@ record(
     and right_w == 30
     and main_fresh_ids
     and is_source_focused()
-    and state.restore_timer == nil,
+    and state.get_restore_timer() == nil,
   string.format(
     "valid=%s left=%s right=%s fresh_ids=%s source_focused=%s timer=%s",
     window.are_pads_valid(),
@@ -296,7 +296,7 @@ record(
     right_w,
     main_fresh_ids,
     is_source_focused(),
-    state.restore_timer
+    state.get_restore_timer()
   )
 )
 
@@ -323,7 +323,7 @@ record(
     and right_w == 30
     and both_fresh_ids
     and is_source_focused()
-    and state.restore_timer == nil,
+    and state.get_restore_timer() == nil,
   string.format(
     "valid=%s left=%s right=%s fresh_ids=%s source_focused=%s timer=%s",
     window.are_pads_valid(),
@@ -331,7 +331,7 @@ record(
     right_w,
     both_fresh_ids,
     is_source_focused(),
-    state.restore_timer
+    state.get_restore_timer()
   )
 )
 
@@ -470,8 +470,8 @@ record(
 )
 record(
   "Cleanup stops restore timer",
-  state.restore_timer == nil,
-  string.format("timer=%s", state.restore_timer)
+  state.get_restore_timer() == nil,
+  string.format("timer=%s", state.get_restore_timer())
 )
 record(
   "Cleanup removes autocmds",

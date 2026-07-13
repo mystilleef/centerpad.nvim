@@ -96,6 +96,16 @@ globals:
       - type: any
         required: false
 
+  spy.new:
+    args:
+      - type: function
+        required: false
+
+  spy.on:
+    args:
+      - type: table
+      - type: string
+
   stub:
     args:
       - type: any
@@ -231,6 +241,11 @@ globals:
       - type: function
       - type: string
         required: false
+
+  # Spy assertions
+  assert.spy:
+    args:
+      - type: any
 
   # Assert type checking
   assert.is_table:

@@ -1,6 +1,3 @@
--- Health check module for centerpad
--- Provides diagnostic information via :checkhealth
-
 local M = {}
 
 function M.check()
@@ -76,15 +73,10 @@ function M.check()
       )
     end
 
-    -- Check saved settings
-    if state.saved_settings.fillchars ~= nil then
-      vim.health.info(
-        "Original fillchars saved: " .. state.saved_settings.fillchars
-      )
-    end
+    -- fillchars are window-local; no global save needed
 
     -- Check for pending timers
-    if state.restore_timer then
+    if state.get_restore_timer() then
       vim.health.info("Restore timer is pending (debouncing in progress)")
     end
   else
