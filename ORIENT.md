@@ -2,175 +2,148 @@
 
 ## Purpose
 
-- Ground changes in `Centerpad` layout, recovery, and per-tab contracts.
-- Complement agent guidance; skip style, commands, and test gates.
+- Center an active editing window with two non-focusable decorative splits.
+- Preserve usable layout through tab switches, source changes, pad loss,
+  ignored contexts, session persistence, and delayed callbacks.
+- Complement agent guidance; focus on architectural boundaries and contracts.
 
 ## Evidence scope
 
-- Source modules, README/help, and regression specs ground claims.
-- No ADR/design-doc corpus found; inferred claims note source/test
-  synthesis.
+- README, public surface, core modules, and regression specs supply evidence.
+- No ADR or design corpus surfaced.
+- Findings follow source-and-test synthesis rather than declared design records.
 
 ## Architectural shape
 
-- Thin façade plus coordinator: public `APIs` merge `config` and
-  dispatch; command loader lazy-requires public surface.
-- Coordinator owns sequencing: guard -> cleanup -> pad creation/resize
-  -> `autocmd` wiring -> enabled mirror -> scheduled validation.
-- Helper modules own one axis: per-tab state, window lifecycle/metadata,
-  event recovery/tracking, enabled `globals`, health diagnostics.
-- `Tabpage` as primary boundary: state proxies, lifecycle `augroups`,
-  timers, trackers, `config` snapshots, and recovery callbacks all
-  resolve through current/owner tab context.
-- Shared `config` object drives user defaults, while per-tab `config`
-  snapshots stabilize recovery/resume after later width/`config`
-  mutation.
+- Thin public façade:
+  - Merges shared option defaults.
+  - Defers plugin loading until user invocation.
+  - Forwards public requests into one coordinator.
+- Coordinator:
+  - Owns validation, ordering, topology mutation, width handling, cleanup,
+    re-enable transitions, and option snapshots.
+  - Injects callbacks into event handling; avoids reverse coordinator imports.
+- Axis modules:
+  - State routes current-tab proxy fields plus owner-targeted access.
+  - Window constructs pads and preserves local visual state.
+  - Autocmds own lifecycle groups, timers, recovery, context tracking,
+    startup deferral, and session choreography.
+  - Enabled centralizes tab-local-to-global mirroring.
+  - Health observes and reports contracts without normal behavioral mutation.
+- Tabpage boundary:
+  - Pad identity, option snapshot, source-option capture, restore timer,
+    tracker intent, lifecycle group, and event ownership follow one tab.
 
-## Module boundaries
+## Boundary map
 
-- `init`:
-  - Merges `config`.
-  - Forwards enable/disable/toggle/run/debug/state calls.
-  - Avoids pad/window mutation.
-- `plugin`:
-  - Registers editor command.
-  - Routes opts through public API.
-  - Defers module load.
-- `centerpad`:
-  - Validates contexts and widths.
-  - Coordinates enable/disable/toggle/run.
-  - Chooses in-place resize versus recreate.
-- `state`:
-  - Exposes transparent tab-scoped proxies for `pad_state`, `tracker`,
-    `config_snapshot`, and `source_options`.
-  - Lazily prunes closed tabs.
-  - Owns debug logging and validation.
-- `window`:
-  - Creates pad buffers/windows, applies blank UI options, marks pad
-    metadata, resizes/deletes tracked pads.
-  - Applies and clears window-local `fillchars`.
-- `autocmds`:
-  - Owns per-tab lifecycle `augroups`, persistent tracker group, focus
-    redirection, `WinClosed` recovery, context suspend/resume, cleanup
-    choreography.
-- `enabled`:
-  - Provides the single seam for internal enabled flag plus new/legacy
-    public `globals`.
-  - Handles legacy-only reads for diagnostics.
-- `health`:
-  - Reports current-tab health and global consistency.
-  - Avoids behavioral side effects beyond legacy-global read path.
-
-## Control flow
-
-- Setup:
-  - Merge `config`.
-  - Optional default enable enters the same coordinator path.
-- Enable:
-  - Reject ignored filetypes/buftypes and floating windows before
-    mutation.
-  - Disable existing layout, clear lifecycle `autocmds`, delete tracked
-    pads, clear leaked source-window fix options.
-  - Track source window, create left/right pads, clean partial creation
-    through disable, snapshot `config` per tab.
-  - Wire pad-focus redirects and owner-tab recovery, apply source
-    `fillchars` locally, mirror enabled `globals` true, schedule
-    validation.
-  - Install context tracker only after both pads survive.
-- Width command:
-  - Parse and bound-check every argument before context check and
-    `config` mutation.
-  - For healthy pads, update snapshot and resize in place.
-  - For missing/corrupt pads or stale source, recreate through enable.
-  - `Invalid` input leaves `config`, pads, `autocmds`, `globals`, and
-    timers untouched.
-- Disable:
-  - Stop restore timer, clear current-tab lifecycle `autocmds`, delete
-    tracked pads, clear source `fillchars` if owner tab survives, mirror
-    enabled `globals` false.
-  - Clear current-tab tracker opt-in/`config`/suspended flag; leave
-    persistent tracker group intact.
+| Boundary | Owns | Leaves elsewhere |
+| :-- | :-- | :-- |
+| Public façade and plugin loader | Shared defaults, exported calls, deferred load | Layout mutation and event registration |
+| Coordinator | Enable/disable/toggle, request guards, resize-or-rebuild sequencing | Low-level window mechanics and autocmd creation |
+| State | Per-tab stores, proxy routing, owner access, timer references, diagnostics | Editor UI mutation |
+| Window | Pad buffers/windows, pad markers, tracked-ID cleanup, local options | Lifecycle policy |
+| Autocmds | Per-tab groups, persistent tracker, owner guards, debounce, recovery, session hooks | Public option ownership |
+| Enabled and health | Global bridge, legacy compatibility reads, diagnostics | Pad construction and cleanup |
 
 ## State and identity
 
-- `state.pad_state` provides authoritative current-tab identity:
-  **main_win**, `left_win`, `right_win`, `enabled`.
-- Pad buffer vars (`is_centerpad`, `pad_side`) distinguish pad windows
-  from user windows; tracked IDs drive destructive cleanup.
-- Window scans support validation and recovery evidence only; cleanup
-  trusts tracked IDs.
-- `state.config_snapshot` decouples recovery/resume widths from later
-  shared `config` changes.
-- `state.source_options` carries captured source-window `fillchars` per
-  tab so cleanup restores original local semantics after source switches.
-- `state.tracker` gates automatic resume; missing opt-in or manual
-  disable prevents surprise re-enable.
-- `enabled.set()` alone updates internal flag and both `globals`;
-  `TabEnter` `remirrors` active-tab truth.
-- Legacy global compatibility lives in `enabled.read_globals()`; keep
-  migration logic out of coordinator and health callers.
-- `Fillchars` changes stay window-local; no global `fillchars`
-  save/restore cycle participates.
+- `pad_state` carries main, left, right, and enabled identities per tab.
+- Pad buffers carry Centerpad and side markers; tracked window IDs drive
+  destructive cleanup.
+- Window scans support validation and recovery only; cleanup follows tracked
+  IDs rather than topology guesses.
+- Per-tab option snapshots decouple recovery and resume from later shared
+  default mutation.
+- Captured source options preserve explicit local `fillchars` versus inherited
+  `fillchars` after cleanup or source replacement.
+- Tracker opt-in, suspension, config copy, and debounce timer gate automatic
+  resume; manual disable clears that authority.
+- One persistent tracker group carries cross-tab bridge work; per-tab groups
+  carry pad lifecycle callbacks.
+- The enabled bridge alone writes internal enabled truth and primary/legacy
+  globals; tab entry remirrors active-tab truth.
 
-## Recovery model
+## Lifecycle flows
 
-- Pad `BufEnter` reasserts blank `statusline`/`winbar`, then redirects
-  focus to valid source only.
-- Recovery `autocmds` carry owner-tab guards; cross-tab `WinClosed`
-  noise returns early.
-- Pad-buffer close detection runs before ignored `buftype`/`filetype`
-  filters.
-- Normal source `WinClosed` events `debounce` through per-tab restore
-  timer.
-- `Debounced` callback switches to owner tab, refreshes source from
-  non-floating non-pad current window, validates pad metadata and
-  widths, then preserves stable layout or recovers through cleanup plus
-  scheduled enable.
-- Scheduled recovery restores prior active tab/window when possible.
-- Context tracker debounces `BufEnter`/`WinEnter`; ignored/floating/pad
-  contexts suspend pads, valid source contexts resume only from prior
-  suspension with stored `config`.
-- Unsafe state converges through cleanup before re-enable; one-sided
-  pads should never persist.
+### Setup and enable
 
-## Architectural traps
+- Setup merges user options; default mode arms a one-shot eligible `FileType`
+  trigger rather than splitting an empty startup buffer.
+- That trigger survives ignored contexts and disarms only after successful
+  enable.
+- Enable rejects ignored buffers and floating windows before topology changes.
+- Enable starts with full reset, then captures the source, creates both pads,
+  snapshots options, wires handlers, applies source-local `fillchars`, mirrors
+  enabled truth, and schedules validation.
+- Partial pad creation or source styling failure routes through coordinator
+  cleanup.
 
-- Don't mutate `state.pad_state` or sibling proxy state from arbitrary
-  callbacks; switch or guard tab context first.
-- Don't clear `trackergroup` during disable; sibling tabs rely on
-  owner-guarded persistent callbacks.
-- Don't delete pads while lifecycle `autocmds` remain armed; cleanup
-  clears group first to avoid self-triggered recovery.
-- Don't touch global `vim.go.fillchars`; source and pads rely on
-  window-local overrides.
-- Don't restore source `fillchars` after destructive pad deletion; capture
-  owner source first so sibling-tab proxies never receive writes.
-- Don't assign empty local statusline/winbar to pads; global-local
-  fallback leaks user UI.
-- Don't update shared `config` widths before every argument and context
-  validation passes.
-- Don't recreate healthy pads for width changes; tests preserve pad ID
-  stability.
-- Don't treat current window as source until non-floating and non-pad
-  checks pass.
-- Don't let ignored-buffer filters hide pad closures; check pad markers
-  first.
-- Don't place legacy global handling outside `enabled`.
-- Don't let recovery `callbacks` act across tabs; owner-tab guards and
-  tab restoration protect user focus.
-- Don't auto-resume after manual disable or on never-enabled tabs.
+### Resize and contextual tracking
+
+- Argument parsing finishes before context checks or shared option mutation.
+- Healthy pads resize in place; missing or corrupt pads route through enable.
+- Floating focus produces no tracker action.
+- Ignored or pad context suspends only a stable enabled layout.
+- Resume requires prior tracker opt-in, suspension, stored options, and absent
+  pads; manual disable prevents surprise revival.
+
+### Recovery and teardown
+
+- Pad entry reapplies explicit local blank chrome, then redirects focus only
+  toward a valid source.
+- Owner guards fence `WinClosed`, debounce callbacks, and tracker callbacks
+  from sibling-tab effects.
+- Pad-close detection precedes ignored-context filtering.
+- Debounced recovery switches into the owner tab, validates source/pad metadata
+  and widths, swaps source `fillchars` atomically, otherwise resets then
+  schedules re-enable.
+- Recovery restores prior tab and window when validity permits.
+- Tab entry remirrors enabled globals and repairs background-tab pad-width
+  drift.
+- Full reset clears owner tracker callbacks before pad deletion; cleanup stops
+  restoration, clears lifecycle callbacks, deletes tracked pads, restores the
+  captured source when ownership survives, then clears enabled truth.
+
+### Startup and session lifecycle
+
+- `SessionLoadPre` disarms pending default enable and resets the current
+  layout before session commands reshape windows.
+- `SessionLoadPost` conditionally starts default layout after session loading.
+- `PersistedSavePre` temporarily removes pads only when blank windows would
+  enter saved session topology; `PersistedSavePost` rebuilds them afterward.
+- Session save handling suppresses intermediary redraw, then restores final
+  layout presentation.
+- Startup and session hooks share the persistent tracker group, preventing a
+  session script from racing the default-enable listener.
+
+## Architectural invariants
+
+- Guard tab ownership before callback effects; restore prior user context after
+  owner-targeted asynchronous work.
+- Clear per-tab lifecycle callbacks before destructive pad cleanup; retain the
+  persistent tracker group for sibling tabs.
+- Keep `fillchars`, statusline, and winbar changes window-local.
+- Capture source-local styling before override; restore only that captured
+  source.
+- Avoid empty local statusline or winbar values; global-local fallback would
+  leak user chrome into pads.
+- Route global enabled writes through the enabled bridge.
+- Validate every width request before shared-option or layout mutation.
+- Prefer tracked IDs for deletion and pad markers for identification.
+- Reject floating or pad windows as source candidates.
+- Coordinate session additions with deferred default enable and tracker
+  ownership.
 
 ## Extension seams
 
-- New ignore rules: update coordinator guard, recovery filters, and
-  tracker context predicate together.
-- New pad visuals: adjust window option/`fillchars` configuration plus
-  validation specs.
-- New per-tab state: add fields in `new_store()` and expose through
-  proxies/timer helpers rather than module `globals`.
-- New recovery heuristics: keep event logic in `autocmds`; inject
-  coordinator callbacks instead of importing coordinator.
-- New public compatibility state: centralize in `enabled`, then report
-  from health.
-- New diagnostics: read current-tab proxies; avoid mutation except
-  documented sync bridges.
+- New ignore rules: align coordinator guards, close-event filters, and tracker
+  predicates.
+- New pad visuals: extend window-local setup plus validation coverage.
+- New per-tab state: add store fields, proxy access, owner-targeted helpers,
+  and cleanup semantics together.
+- New recovery policy: retain event ownership inside autocmds; pass coordinator
+  callbacks inward.
+- New public compatibility state: centralize bridges inside enabled, then
+  expose diagnostics through health.
+- New session integration: preserve startup-listener disarming, owner guards,
+  and topology cleanup ordering.
