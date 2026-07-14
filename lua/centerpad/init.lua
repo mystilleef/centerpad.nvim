@@ -41,7 +41,7 @@ end
 function M.setup(config)
   resolve(config)
   if M.config.enable_by_default then
-    M.enable()
+    centerpad.setup_auto_enable()
   end
 end
 

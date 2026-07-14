@@ -157,6 +157,10 @@ function M.disable()
   autocmds.full_reset()
 end
 
+function M.setup_auto_enable()
+  autocmds.setup_auto_enable()
+end
+
 function M.toggle(config)
   if state.pad_state.enabled then
     state.log_info("toggle", "Toggling off")

@@ -49,22 +49,31 @@ describe("centerpad.init", function()
       end
     )
 
-    it("should enable by default when enable_by_default is true", function()
-      vim.bo.filetype = ""
-      vim.bo.buftype = ""
+    it(
+      "should arm auto-enable, deferred to the first FileType event, "
+        .. "when enable_by_default is true",
+      function()
+        vim.bo.filetype = ""
+        vim.bo.buftype = ""
 
-      init.setup({
-        leftpad = 20,
-        rightpad = 20,
-        enable_by_default = true,
-        ignore_filetypes = {},
-        ignore_buftypes = {},
-      })
+        init.setup({
+          leftpad = 20,
+          rightpad = 20,
+          enable_by_default = true,
+          ignore_filetypes = {},
+          ignore_buftypes = {},
+        })
 
-      vim.wait(50)
+        -- Not enabled synchronously: deferring to FileType avoids
+        -- creating pads around the empty startup buffer on an
+        -- eager-loaded consumer.
+        assert.is_false(state.pad_state.enabled)
 
-      assert.is_true(state.pad_state.enabled)
-    end)
+        vim.api.nvim_exec_autocmds("FileType", {})
+
+        assert.is_true(state.pad_state.enabled)
+      end
+    )
 
     it("should not override existing config fields with nil", function()
       init.setup({

@@ -1297,4 +1297,187 @@ describe("centerpad.autocmds", function()
       end
     )
   end)
+
+  describe(
+    "session-awareness (SessionLoadPre/Post, PersistedSavePre/Post)",
+    function()
+      local centerpad_pkg
+
+      local function prepare_buffer()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_set_option_value("buftype", "", { buf = buf })
+        vim.api.nvim_set_option_value("filetype", "", { buf = buf })
+        pcall(vim.api.nvim_set_option_value, "winfixbuf", false, { win = 0 })
+        vim.api.nvim_set_current_buf(buf)
+        return buf
+      end
+
+      before_each(function()
+        package.loaded["centerpad"] = nil
+        centerpad_pkg = require("centerpad")
+        prepare_buffer()
+        vim.o.columns = 120
+      end)
+
+      after_each(function()
+        test_helper.cleanup_headless_spec()
+      end)
+
+      describe("SessionLoadPre / SessionLoadPost", function()
+        it(
+          "disables centerpad on SessionLoadPre when it was enabled",
+          function()
+            centerpad_pkg.setup({
+              leftpad = 20,
+              rightpad = 20,
+              ignore_filetypes = {},
+              ignore_buftypes = {},
+            })
+            centerpad_pkg.enable()
+            vim.wait(100)
+            assert.is_true(state.pad_state.enabled)
+
+            vim.api.nvim_exec_autocmds("SessionLoadPre", {})
+
+            assert.is_false(state.pad_state.enabled)
+          end
+        )
+
+        it(
+          "enables centerpad on SessionLoadPost when enable_by_default is true",
+          function()
+            centerpad_pkg.setup({
+              leftpad = 20,
+              rightpad = 20,
+              enable_by_default = true,
+              ignore_filetypes = {},
+              ignore_buftypes = {},
+            })
+            assert.is_false(state.pad_state.enabled)
+
+            vim.api.nvim_exec_autocmds("SessionLoadPost", {})
+
+            assert.is_true(state.pad_state.enabled)
+          end
+        )
+
+        it(
+          "does not enable on SessionLoadPost when enable_by_default is false",
+          function()
+            centerpad_pkg.setup({
+              leftpad = 20,
+              rightpad = 20,
+              enable_by_default = false,
+              ignore_filetypes = {},
+              ignore_buftypes = {},
+            })
+
+            vim.api.nvim_exec_autocmds("SessionLoadPost", {})
+
+            assert.is_false(state.pad_state.enabled)
+          end
+        )
+
+        it(
+          "disarms a pending auto-enable listener so a restore's own "
+            .. "FileType events can't trigger it mid-script",
+          function()
+            centerpad_pkg.setup({
+              leftpad = 20,
+              rightpad = 20,
+              enable_by_default = true,
+              ignore_filetypes = {},
+              ignore_buftypes = {},
+            })
+
+            vim.api.nvim_exec_autocmds("SessionLoadPre", {})
+            -- Simulate a session script's own FileType event firing
+            -- before SessionLoadPost; the auto-enable listener must
+            -- not react.
+            vim.api.nvim_exec_autocmds("FileType", {})
+
+            assert.is_false(state.pad_state.enabled)
+          end
+        )
+      end)
+
+      describe(
+        "PersistedSavePre / PersistedSavePost (User autocmds)",
+        function()
+          it(
+            "disables before save and re-enables after if it was enabled",
+            function()
+              centerpad_pkg.setup({
+                leftpad = 20,
+                rightpad = 20,
+                ignore_filetypes = {},
+                ignore_buftypes = {},
+              })
+              centerpad_pkg.enable()
+              vim.wait(100)
+              assert.is_true(state.pad_state.enabled)
+
+              vim.api.nvim_exec_autocmds(
+                "User",
+                { pattern = "PersistedSavePre" }
+              )
+              assert.is_false(state.pad_state.enabled)
+
+              vim.api.nvim_exec_autocmds(
+                "User",
+                { pattern = "PersistedSavePost" }
+              )
+              vim.wait(100)
+              assert.is_true(state.pad_state.enabled)
+            end
+          )
+
+          it(
+            "stays disabled after save if it was not enabled beforehand",
+            function()
+              centerpad_pkg.setup({
+                leftpad = 20,
+                rightpad = 20,
+                enable_by_default = false,
+                ignore_filetypes = {},
+                ignore_buftypes = {},
+              })
+              assert.is_false(state.pad_state.enabled)
+
+              vim.api.nvim_exec_autocmds(
+                "User",
+                { pattern = "PersistedSavePre" }
+              )
+              vim.api.nvim_exec_autocmds(
+                "User",
+                { pattern = "PersistedSavePost" }
+              )
+
+              assert.is_false(state.pad_state.enabled)
+            end
+          )
+        end
+      )
+
+      describe("setup_auto_enable()", function()
+        it("stays armed across an ignored-filetype FileType event", function()
+          centerpad_pkg.setup({
+            leftpad = 20,
+            rightpad = 20,
+            enable_by_default = true,
+            ignore_filetypes = { "gitcommit" },
+            ignore_buftypes = {},
+          })
+
+          vim.bo.filetype = "gitcommit"
+          vim.api.nvim_exec_autocmds("FileType", {})
+          assert.is_false(state.pad_state.enabled)
+
+          vim.bo.filetype = ""
+          vim.api.nvim_exec_autocmds("FileType", {})
+          assert.is_true(state.pad_state.enabled)
+        end)
+      end)
+    end
+  )
 end)

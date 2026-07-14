@@ -68,6 +68,135 @@ vim.api.nvim_create_autocmd("TabClosed", {
   end,
 })
 
+-- Session-awareness: pad windows are real splits, and mksession has no
+-- concept of "decorative" windows, so it saves and restores them like
+-- ordinary content. Left unchecked, a session restore's own edit/wincmd
+-- sequence races the buffer tracker's own window churn (both fire off
+-- BufEnter/WinEnter), and any session saved while pads are up bakes
+-- them in as if they were real windows.
+local auto_enable_id
+
+local function disarm_auto_enable()
+  if auto_enable_id then
+    pcall(vim.api.nvim_del_autocmd, auto_enable_id)
+    auto_enable_id = nil
+  end
+end
+
+-- Arms a one-shot FileType listener that enables centerpad on the first
+-- eligible buffer. Deferred rather than enabling immediately in setup()
+-- so an eager-loaded consumer (required for the SessionLoadPre hook
+-- below to register in time on a bare launch) doesn't create pads
+-- around the empty startup buffer. Stays armed across ignored-filetype
+-- events -- only disarms once `enable` actually turns pads on -- and is
+-- disarmed early by SessionLoadPre so a session restore's own
+-- edit/enew commands can't trigger it mid-script; SessionLoadPost
+-- takes over from there.
+function M.setup_auto_enable()
+  if auto_enable_id then
+    return
+  end
+  -- Reentrancy guard: enable() switches the current window back to
+  -- main_win, which can itself fire FileType. Without this, that would
+  -- re-enter this same callback while the outer call is still running.
+  local running = false
+  auto_enable_id = vim.api.nvim_create_autocmd("FileType", {
+    group = M.centerpad_tracker,
+    callback = function()
+      if running then
+        return
+      end
+      running = true
+      local ok, err = pcall(function()
+        require("centerpad").enable()
+      end)
+      running = false
+      if not ok then
+        error(err, 0)
+      end
+      if state.pad_state.enabled then
+        disarm_auto_enable()
+      end
+    end,
+  })
+end
+
+-- Native event: fires for any :mksession-sourced restore, regardless of
+-- which session manager (or none) triggered it.
+vim.api.nvim_create_autocmd("SessionLoadPre", {
+  group = M.centerpad_tracker,
+  callback = function()
+    disarm_auto_enable()
+    require("centerpad").disable()
+  end,
+})
+
+vim.api.nvim_create_autocmd("SessionLoadPost", {
+  group = M.centerpad_tracker,
+  callback = function()
+    -- Belt and suspenders: SessionLoadPre already disarms this, but
+    -- enable() below switches windows/buffers, which can itself fire
+    -- FileType. A still-armed listener reacting to that would re-enter
+    -- enable() while it's already running (E218: nesting too deep).
+    disarm_auto_enable()
+    if require("centerpad").config.enable_by_default then
+      require("centerpad").enable()
+    end
+  end,
+})
+
+-- No native pre-save event exists in Neovim; persisted.nvim fires these
+-- as custom User events. Harmless no-ops if persisted.nvim isn't in use
+-- -- these patterns simply never fire.
+--
+-- mksession only needs help from us when 'sessionoptions' includes
+-- "blank": that's the flag that makes it skip an unnamed/nofile-style
+-- window like a pad on its own. When a consumer's config already
+-- excludes "blank", mksession never captures pads in the first place,
+-- so disabling/re-enabling around the save would just be pointless
+-- flicker -- skip it entirely in that case.
+local was_enabled_for_save = false
+local did_disable_for_save = false
+local saved_lazyredraw = false
+
+local function sessionoptions_includes_blank()
+  return vim.tbl_contains(
+    vim.split(vim.o.sessionoptions, ",", { plain = true }),
+    "blank"
+  )
+end
+
+vim.api.nvim_create_autocmd("User", {
+  group = M.centerpad_tracker,
+  pattern = "PersistedSavePre",
+  callback = function()
+    was_enabled_for_save = state.pad_state.enabled
+    did_disable_for_save = was_enabled_for_save
+      and sessionoptions_includes_blank()
+    if did_disable_for_save then
+      -- Suppress the disable/mks!/enable teardown-rebuild flicker;
+      -- PersistedSavePost forces a single clean repaint of the final
+      -- state once the pads are back.
+      saved_lazyredraw = vim.o.lazyredraw
+      vim.o.lazyredraw = true
+      require("centerpad").disable()
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd("User", {
+  group = M.centerpad_tracker,
+  pattern = "PersistedSavePost",
+  callback = function()
+    if did_disable_for_save then
+      require("centerpad").enable()
+      vim.o.lazyredraw = saved_lazyredraw
+      vim.cmd("redraw!")
+    end
+    did_disable_for_save = false
+  end,
+})
+
 -- Returns true when owner_tab is nil (no owner captured) or when it
 -- is the current valid tabpage.
 local function validate_owner_tab(owner_tab)
